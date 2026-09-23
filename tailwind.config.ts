@@ -14,10 +14,12 @@ const config: Config = {
           700: '#1d4ed8',
         },
         // Industrial dark "workshop mode" for the mechanic dashboard.
-        'workshop-dark': '#0b0f14',
-        'workshop-surface': '#151b23',
-        'workshop-surface-hover': '#1c2530',
-        'workshop-border': '#262f3b',
+        // Kept far apart on purpose: background near-black, cards
+        // noticeably lighter, so the toggle reads as an obvious change.
+        'workshop-dark': '#070a0d',
+        'workshop-surface': '#1a222c',
+        'workshop-surface-hover': '#242f3d',
+        'workshop-border': '#33404f',
         'alarm-red': '#dc2626',
         'electric-blue': '#0ea5ff',
         // Explicit job-status semantic colors.

@@ -70,9 +70,10 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
             type="button"
             onClick={toggleTheme}
             aria-label={isDark ? 'Uključi svijetli način rada' : 'Uključi tamni radionički način rada'}
-            className="press-effect flex min-h-[52px] min-w-[52px] items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
+            className="press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
           >
             {isDark ? <Sun className="h-5 w-5" strokeWidth={2} /> : <Moon className="h-5 w-5" strokeWidth={2} />}
+            <span className="hidden sm:inline">{isDark ? 'Svijetlo' : 'Tamno'}</span>
           </button>
 
           <button
