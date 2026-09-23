@@ -4,14 +4,19 @@ export function formatEuroHR(amount: number): string {
   return `${amount.toFixed(2).replace('.', ',')} €`;
 }
 
+// Simplified, repair-workflow-only labels. PARASITIC_DRAIN_TESTING and
+// AWAITING_MODULE_REMAP intentionally share one label — the mechanic picks
+// a single "Test pražnjenja / moduli" step from the status drawer
+// (see SELECTABLE_JOB_STATUSES in JobCard.tsx); AWAITING_MODULE_REMAP stays
+// in the enum only so older records keep a valid, correctly-labeled status.
 export const JOB_STATUS_LABELS_HR: Record<JobStatus, string> = {
-  PENDING_TRIAGE: 'čeka pregled',
-  IN_DIAGNOSTIC: 'u dijagnostici',
-  PARASITIC_DRAIN_TESTING: 'testiranje parazitskog pražnjenja',
-  AWAITING_MODULE_REMAP: 'čeka reprogramiranje modula',
-  IN_REPAIR: 'u popravku',
-  FINISHED_AWAITING_PICKUP: 'završeno, čeka preuzimanje',
-  COLLECTED: 'preuzeto',
+  PENDING_TRIAGE: 'Novi prijem',
+  IN_DIAGNOSTIC: 'U dijagnostici',
+  PARASITIC_DRAIN_TESTING: 'Test pražnjenja / moduli',
+  AWAITING_MODULE_REMAP: 'Test pražnjenja / moduli',
+  IN_REPAIR: 'Rad u tijeku',
+  FINISHED_AWAITING_PICKUP: 'Gotovo / spremno',
+  COLLECTED: 'Preuzeto',
 };
 
 export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {

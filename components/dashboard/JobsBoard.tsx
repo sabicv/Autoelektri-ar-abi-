@@ -7,24 +7,25 @@ import JobCard from './JobCard';
 import { cn } from '@/lib/utils';
 import type { Client, Job, Vehicle } from '@/types/database';
 
-type Filter = 'ACTIVE' | 'ALARM' | 'COLLECTED' | 'ALL';
+type Filter = 'ACTIVE' | 'DIAGNOSTIC' | 'READY' | 'COLLECTED' | 'ALL';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'ACTIVE', label: 'Aktivno' },
-  { key: 'ALARM', label: 'Ležarina' },
-  { key: 'COLLECTED', label: 'Završeno' },
+  { key: 'DIAGNOSTIC', label: 'U dijagnostici' },
+  { key: 'READY', label: 'Spremno' },
+  { key: 'COLLECTED', label: 'Preuzeto' },
   { key: 'ALL', label: 'Sve' },
 ];
+
+const DIAGNOSTIC_STATUSES: Job['status'][] = ['IN_DIAGNOSTIC', 'PARASITIC_DRAIN_TESTING', 'AWAITING_MODULE_REMAP'];
 
 interface JobsBoardProps {
   jobs: Job[];
   clients: Client[];
   vehicles: Vehicle[];
-  freeParkingDays: number;
-  dailyParkingFee: number;
 }
 
-export default function JobsBoard({ jobs, clients, vehicles, freeParkingDays, dailyParkingFee }: JobsBoardProps) {
+export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [jobList, setJobList] = useState(jobs);
 
@@ -35,8 +36,10 @@ export default function JobsBoard({ jobs, clients, vehicles, freeParkingDays, da
     switch (filter) {
       case 'ACTIVE':
         return jobList.filter((j) => j.status !== 'COLLECTED');
-      case 'ALARM':
-        return jobList.filter((j) => j.accrued_parking_fees > 0);
+      case 'DIAGNOSTIC':
+        return jobList.filter((j) => DIAGNOSTIC_STATUSES.includes(j.status));
+      case 'READY':
+        return jobList.filter((j) => j.status === 'FINISHED_AWAITING_PICKUP');
       case 'COLLECTED':
         return jobList.filter((j) => j.status === 'COLLECTED');
       case 'ALL':
@@ -96,8 +99,6 @@ export default function JobsBoard({ jobs, clients, vehicles, freeParkingDays, da
                     clientName={`${client.first_name} ${client.last_name}`}
                     clientPhone={client.phone_number}
                     vehicle={vehicle}
-                    freeParkingDays={freeParkingDays}
-                    dailyParkingFee={dailyParkingFee}
                     onUpdated={handleJobUpdated}
                   />
                 </motion.div>

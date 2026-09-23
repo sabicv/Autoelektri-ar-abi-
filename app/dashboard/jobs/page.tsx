@@ -15,7 +15,7 @@ export default async function JobsPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
   if (!profile) redirect('/login');
 
-  const { data: tenant } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle();
+  const { data: tenant } = await supabase.from('tenants').select('id').eq('id', profile.tenant_id).maybeSingle();
   if (!tenant) redirect('/login');
 
   // RLS scopes these to the current tenant automatically.
@@ -28,13 +28,7 @@ export default async function JobsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Poslovi</h1>
-      <JobsBoard
-        jobs={jobs ?? []}
-        clients={clients ?? []}
-        vehicles={vehicles ?? []}
-        freeParkingDays={tenant.free_parking_days}
-        dailyParkingFee={tenant.daily_parking_fee}
-      />
+      <JobsBoard jobs={jobs ?? []} clients={clients ?? []} vehicles={vehicles ?? []} />
     </div>
   );
 }

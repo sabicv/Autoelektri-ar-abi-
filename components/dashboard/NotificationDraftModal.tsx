@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { AlertCircle, Loader2, Pencil, Send, X } from 'lucide-react';
-import { draftJobFinishedMessage, draftParkingWarningMessage, draftUpsellMessage } from '@/lib/notifications/drafts';
+import { draftDiagnosticCompleteMessage, draftJobFinishedMessage, draftUpsellMessage } from '@/lib/notifications/drafts';
 import { cn } from '@/lib/utils';
 import PhotoUploadDropzone, { type UploadedPhoto } from '@/components/triage/PhotoUploadDropzone';
 
-export type NotificationType = 'JOB_FINISHED' | 'UPSELL_REQUEST' | 'PARKING_WARNING' | 'CUSTOM';
+export type NotificationType = 'JOB_FINISHED' | 'DIAGNOSTIC_COMPLETE' | 'UPSELL_REQUEST' | 'CUSTOM';
 
 interface NotificationDraftModalProps {
   open: boolean;
@@ -18,18 +18,14 @@ interface NotificationDraftModalProps {
     clientFirstName: string;
     vehicleLabel: string;
     totalAmount?: number;
-    freeParkingDays?: number;
-    dailyParkingFee?: number;
-    daysParked?: number;
-    accruedFee?: number;
   };
   onSent?: () => void;
 }
 
 const TITLES: Record<NotificationType, string> = {
   JOB_FINISHED: 'Obavijest: posao završen',
+  DIAGNOSTIC_COMPLETE: 'Obavijest: dijagnostika završena',
   UPSELL_REQUEST: 'Zahtjev za dodatni zahvat',
-  PARKING_WARNING: 'Upozorenje o ležarini',
   CUSTOM: 'Poruka klijentu',
 };
 
@@ -40,16 +36,11 @@ function buildInitialDraft(type: NotificationType, job: NotificationDraftModalPr
         clientFirstName: job.clientFirstName,
         vehicleLabel: job.vehicleLabel,
         totalAmount: job.totalAmount ?? 0,
-        freeParkingDays: job.freeParkingDays ?? 3,
-        dailyParkingFee: job.dailyParkingFee ?? 15,
       });
-    case 'PARKING_WARNING':
-      return draftParkingWarningMessage({
+    case 'DIAGNOSTIC_COMPLETE':
+      return draftDiagnosticCompleteMessage({
         clientFirstName: job.clientFirstName,
         vehicleLabel: job.vehicleLabel,
-        daysParked: job.daysParked ?? 0,
-        accruedFee: job.accruedFee ?? 0,
-        dailyParkingFee: job.dailyParkingFee ?? 15,
       });
     case 'UPSELL_REQUEST':
       return '';
@@ -71,10 +62,10 @@ export default function NotificationDraftModal({
   const [defectDescription, setDefectDescription] = useState('');
   const [price, setPrice] = useState('');
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  const [faultSummary, setFaultSummary] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canRegenerate = type === 'UPSELL_REQUEST';
   const priceNumber = useMemo(() => Number(price.replace(',', '.')), [price]);
 
   if (!open) return null;
@@ -86,6 +77,17 @@ export default function NotificationDraftModal({
         vehicleLabel: job.vehicleLabel,
         defectDescription: defectDescription || '(opišite kvar)',
         price: Number.isFinite(priceNumber) ? priceNumber : 0,
+      })
+    );
+    setIsEditing(false);
+  }
+
+  function regenerateDiagnosticDraft() {
+    setMessage(
+      draftDiagnosticCompleteMessage({
+        clientFirstName: job.clientFirstName,
+        vehicleLabel: job.vehicleLabel,
+        faultSummary,
       })
     );
     setIsEditing(false);
@@ -126,7 +128,9 @@ export default function NotificationDraftModal({
               price: priceNumber,
               photoPath: photos[0].path,
             }
-          : { type, jobId: job.id, message };
+          : type === 'DIAGNOSTIC_COMPLETE'
+            ? { type, jobId: job.id, message, faultSummary: faultSummary || undefined }
+            : { type, jobId: job.id, message };
 
       const response = await fetch('/api/notifications/send', {
         method: 'POST',
@@ -218,6 +222,34 @@ export default function NotificationDraftModal({
               <button
                 type="button"
                 onClick={regenerateUpsellDraft}
+                className="press-effect min-h-[44px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
+              >
+                Generiraj prijedlog poruke
+              </button>
+            </div>
+          )}
+
+          {type === 'DIAGNOSTIC_COMPLETE' && (
+            <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-workshop-border">
+              <div>
+                <label
+                  htmlFor="faultSummary"
+                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Kratki nalaz (opcionalno)
+                </label>
+                <input
+                  id="faultSummary"
+                  value={faultSummary}
+                  onChange={(e) => setFaultSummary(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+                  placeholder="Npr. prekid na instalaciji alternatora"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={regenerateDiagnosticDraft}
                 className="press-effect min-h-[44px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
               >
                 Generiraj prijedlog poruke

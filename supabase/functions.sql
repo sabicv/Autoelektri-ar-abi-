@@ -181,21 +181,21 @@ grant execute on function public.apply_upsell_response to service_role;
 -- ---------------------------------------------------------------------
 -- recalculate_parking_fees
 --
--- Called daily by app/api/cron/parking-check/route.ts. Set-based: finds
--- every FINISHED_AWAITING_PICKUP job whose finished_at is older than its
--- tenant's free_parking_days, recomputes accrued_parking_fees for all of
--- them in a single atomic statement, and returns the updated rows so the
--- route can log a PARKING_FEE_UPDATED job_event (the "draft alert") for
--- each one. Re-running this daily naturally keeps the fee current as days
--- accumulate — it does not track whether a warning was already sent to
--- the client (that stays a separate, human-approved WhatsApp dispatch).
+-- Called daily by app/api/cron/parking-check/route.ts. Historically this
+-- computed and accrued a monetary penalty (accrued_parking_fees) — the
+-- platform no longer does aggressive fee enforcement, so this is now a
+-- passive read-only check: it finds FINISHED_AWAITING_PICKUP jobs sitting
+-- past the tenant's configured window and returns how many days, purely
+-- so the cron route can leave an informational job_events note. It does
+-- NOT write to jobs.accrued_parking_fees anymore — that column is frozen
+-- at whatever value existing rows already had (kept for historical/
+-- accounting reference, not actively grown).
 -- ---------------------------------------------------------------------
 create or replace function public.recalculate_parking_fees()
 returns table (
   job_id uuid,
   tenant_id uuid,
-  days_parked int,
-  accrued_fee numeric
+  days_parked int
 )
 language plpgsql
 security definer
@@ -203,40 +203,19 @@ set search_path = public
 as $$
 begin
   return query
-  with candidates as (
-    select
-      j.id,
-      j.tenant_id,
-      j.finished_at,
-      t.free_parking_days,
-      t.daily_parking_fee,
-      floor(extract(epoch from (now() - j.finished_at)) / 86400)::int as computed_days_parked
-    from public.jobs j
-    join public.tenants t on t.id = j.tenant_id
-    where j.status = 'FINISHED_AWAITING_PICKUP'
-      and j.finished_at is not null
-  ),
-  due as (
-    select
-      candidates.*,
-      (computed_days_parked - free_parking_days) * daily_parking_fee as computed_fee
-    from candidates
-    where computed_days_parked > free_parking_days
-  ),
-  updated as (
-    update public.jobs j
-    set accrued_parking_fees = due.computed_fee
-    from due
-    where j.id = due.id
-    returning j.id
-  )
-  select due.id, due.tenant_id, due.computed_days_parked, due.computed_fee
-  from due
-  join updated on updated.id = due.id;
+  select
+    j.id,
+    j.tenant_id,
+    floor(extract(epoch from (now() - j.finished_at)) / 86400)::int as computed_days_parked
+  from public.jobs j
+  join public.tenants t on t.id = j.tenant_id
+  where j.status = 'FINISHED_AWAITING_PICKUP'
+    and j.finished_at is not null
+    and floor(extract(epoch from (now() - j.finished_at)) / 86400)::int > t.free_parking_days;
 end;
 $$;
 
-comment on function public.recalculate_parking_fees is 'Daily cron: recomputes accrued_parking_fees for every FINISHED_AWAITING_PICKUP job past its tenant''s free parking window. Server-only (service role).';
+comment on function public.recalculate_parking_fees is 'Daily cron: passively reports FINISHED_AWAITING_PICKUP jobs sitting past the tenant''s window. Does not accrue fees. Server-only (service role).';
 
 revoke all on function public.recalculate_parking_fees from public, anon, authenticated;
 grant execute on function public.recalculate_parking_fees to service_role;

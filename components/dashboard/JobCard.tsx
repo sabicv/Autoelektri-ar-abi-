@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Car, ChevronDown, KeyRound, Phone, Wrench, Zap } from 'lucide-react';
+import { Bell, Car, ChevronDown, Clock, KeyRound, Phone, Stethoscope, Wrench, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
 import Badge, { type BadgeVariant } from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
+import DiagnosticWorkbench from './DiagnosticWorkbench';
 import VoiceWorkLogger from './VoiceWorkLogger';
 import JobPhotoVault from './JobPhotoVault';
 import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
@@ -15,37 +16,43 @@ import SmartLockboxModal from './SmartLockboxModal';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { JOB_STATUSES, type Job, type JobStatus, type JobUpdate } from '@/types/database';
+import type { Job, JobStatus, JobUpdate } from '@/types/database';
 
 interface JobCardProps {
   job: Job;
   clientName: string;
   clientPhone: string;
   vehicle: { make: string | null; model: string | null; registration_plate: string | null };
-  freeParkingDays: number;
-  dailyParkingFee: number;
   onUpdated?: (job: Job) => void;
 }
+
+// Curated, repair-workflow-only status picker. AWAITING_MODULE_REMAP is
+// intentionally not offered here — it now shares a label ("Test pražnjenja
+// / moduli") with PARASITIC_DRAIN_TESTING, so the drawer picks one
+// canonical value instead of showing two buttons with identical text.
+// The enum value itself is kept for any pre-existing historical records.
+const SELECTABLE_JOB_STATUSES: JobStatus[] = [
+  'PENDING_TRIAGE',
+  'IN_DIAGNOSTIC',
+  'PARASITIC_DRAIN_TESTING',
+  'IN_REPAIR',
+  'FINISHED_AWAITING_PICKUP',
+  'COLLECTED',
+];
 
 const STATUS_BADGE_VARIANT: Record<JobStatus, BadgeVariant> = {
   PENDING_TRIAGE: 'neutral',
   IN_DIAGNOSTIC: 'diagnostic',
   PARASITIC_DRAIN_TESTING: 'diagnostic',
-  AWAITING_MODULE_REMAP: 'progress',
+  AWAITING_MODULE_REMAP: 'diagnostic',
   IN_REPAIR: 'progress',
-  FINISHED_AWAITING_PICKUP: 'progress',
+  FINISHED_AWAITING_PICKUP: 'collected',
   COLLECTED: 'collected',
 };
 
-export default function JobCard({
-  job,
-  clientName,
-  clientPhone,
-  vehicle,
-  freeParkingDays,
-  dailyParkingFee,
-  onUpdated,
-}: JobCardProps) {
+const DIAGNOSTIC_PHASE_STATUSES: JobStatus[] = ['IN_DIAGNOSTIC', 'PARASITIC_DRAIN_TESTING', 'AWAITING_MODULE_REMAP'];
+
+export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdated }: JobCardProps) {
   const [currentJob, setCurrentJob] = useState(job);
   const [expanded, setExpanded] = useState(false);
   const [statusDrawerOpen, setStatusDrawerOpen] = useState(false);
@@ -53,9 +60,9 @@ export default function JobCard({
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
 
-  const hasParkingAlarm = currentJob.accrued_parking_fees > 0;
   const totalCost = currentJob.total_labor_cost + currentJob.total_parts_cost + currentJob.accrued_parking_fees;
   const daysParked = currentJob.finished_at ? daysSince(currentJob.finished_at) : 0;
+  const showParkedDuration = currentJob.status === 'FINISHED_AWAITING_PICKUP' && daysParked > 0;
   const clientFirstName = clientName.split(' ')[0] || clientName;
 
   async function changeStatus(newStatus: JobStatus) {
@@ -107,29 +114,6 @@ export default function JobCard({
   return (
     <motion.div layout transition={{ type: 'spring', stiffness: 350, damping: 32 }}>
       <Card hoverLift className="overflow-hidden">
-        {hasParkingAlarm && (
-          <div className="flex items-center justify-between gap-2 bg-alarm-red px-4 py-2.5 text-white">
-            <div className="flex items-center gap-2">
-              <Badge variant="alarm" pulse className="bg-white/20 text-white">
-                ALARM
-              </Badge>
-              <span className="text-xs font-semibold">
-                {daysParked} {daysParked === 1 ? 'dan' : 'dana'} parkirano
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black tabular-nums">{formatEuroHR(currentJob.accrued_parking_fees)}</span>
-              <button
-                type="button"
-                onClick={() => setNotificationType('PARKING_WARNING')}
-                className="press-effect flex min-h-[36px] items-center gap-1 rounded-lg bg-white/20 px-2.5 text-xs font-bold hover:bg-white/30"
-              >
-                <Bell className="h-3.5 w-3.5" strokeWidth={2} /> Upozori
-              </button>
-            </div>
-          </div>
-        )}
-
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -152,6 +136,12 @@ export default function JobCard({
                 {vehicleLabel(vehicle)}
               </p>
               <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{clientName}</p>
+              {showParkedDuration && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                  Vozilo parkirano {daysParked} {daysParked === 1 ? 'dan' : 'dana'}
+                </p>
+              )}
             </div>
 
             <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0 pt-1">
@@ -170,10 +160,9 @@ export default function JobCard({
               className="overflow-hidden border-t border-slate-100 dark:border-workshop-border"
             >
               <div className="space-y-5 px-4 py-4">
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <div className="grid grid-cols-3 gap-3 text-sm">
                   <Stat label="Rad" value={formatEuroHR(currentJob.total_labor_cost)} />
                   <Stat label="Dijelovi" value={formatEuroHR(currentJob.total_parts_cost)} />
-                  <Stat label="Ležarina" value={formatEuroHR(currentJob.accrued_parking_fees)} />
                   <Stat label="Ukupno" value={formatEuroHR(totalCost)} emphasis />
                 </div>
 
@@ -187,6 +176,11 @@ export default function JobCard({
                   <Button variant="secondary" size="sm" onClick={() => setStatusDrawerOpen(true)}>
                     Promijeni status
                   </Button>
+                  {DIAGNOSTIC_PHASE_STATUSES.includes(currentJob.status) && (
+                    <Button variant="outline" size="sm" onClick={() => setNotificationType('DIAGNOSTIC_COMPLETE')}>
+                      <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova
+                    </Button>
+                  )}
                   {currentJob.status === 'FINISHED_AWAITING_PICKUP' && (
                     <>
                       <Button variant="primary" size="sm" onClick={() => setNotificationType('JOB_FINISHED')}>
@@ -201,7 +195,19 @@ export default function JobCard({
 
                 <section>
                   <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-                    <Wrench className="h-4 w-4" strokeWidth={2} /> Zapis rada
+                    <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnostička radna ploča
+                  </h3>
+                  <DiagnosticWorkbench
+                    jobId={currentJob.id}
+                    tenantId={currentJob.tenant_id}
+                    initialDiagnosticNotes={currentJob.diagnostic_notes}
+                    onSaved={(notes) => setCurrentJob((prev) => ({ ...prev, diagnostic_notes: notes }))}
+                  />
+                </section>
+
+                <section>
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
+                    <Wrench className="h-4 w-4" strokeWidth={2} /> Izvedeni radovi i sažetak
                   </h3>
                   <VoiceWorkLogger
                     jobId={currentJob.id}
@@ -227,7 +233,7 @@ export default function JobCard({
             Promijeni status naloga
           </DrawerTitle>
           <div className="space-y-2 overflow-y-auto px-4 py-4">
-            {JOB_STATUSES.map((status) => (
+            {SELECTABLE_JOB_STATUSES.map((status) => (
               <button
                 key={status}
                 type="button"
@@ -258,10 +264,6 @@ export default function JobCard({
             clientFirstName,
             vehicleLabel: vehicleLabel(vehicle),
             totalAmount: totalCost,
-            freeParkingDays,
-            dailyParkingFee,
-            daysParked,
-            accruedFee: currentJob.accrued_parking_fees,
           }}
         />
       )}

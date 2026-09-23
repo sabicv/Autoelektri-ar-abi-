@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, Briefcase, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { BarChart3, Briefcase, Car, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
   { href: '/dashboard/jobs', label: 'Poslovi', icon: Briefcase },
+  { href: '/dashboard/vehicles', label: 'Vozila', icon: Car },
   { href: '/dashboard/analytics', label: 'Analitika', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Postavke', icon: Settings },
 ];

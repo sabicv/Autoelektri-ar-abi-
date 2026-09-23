@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { formatEuroHR, daysSince } from '@/lib/format';
 import {
   loadJobDispatchContext,
   logJobEvent,
+  sendDiagnosticCompleteNotification,
   sendFreeformText,
   sendJobFinishedNotification,
-  sendParkingWarningNotification,
   sendUpsellRequest,
   type WhatsAppSendResult,
 } from '@/lib/notifications/whatsapp';
@@ -16,7 +15,7 @@ import {
 // components/dashboard/NotificationDraftModal.tsx after "POŠALJI NA
 // WHATSAPP" is clicked.
 //
-// JOB_FINISHED / PARKING_WARNING / UPSELL_REQUEST route to the Meta
+// JOB_FINISHED / DIAGNOSTIC_COMPLETE / UPSELL_REQUEST route to the Meta
 // Message Template functions in lib/notifications/whatsapp.ts (required
 // for proactive/cold-outbound sends). `message` is the mechanic's
 // reviewed/edited text — since a template's wording is fixed by Meta's
@@ -26,6 +25,9 @@ import {
 // CUSTOM sends the mechanic's text exactly as written via freeform
 // WhatsApp text — only works inside an open 24h session; Meta's rejection
 // in that case is surfaced back to the mechanic rather than swallowed.
+//
+// No PARKING_WARNING type — the platform no longer sends fee/penalty
+// client messages (see JobCard's passive duration note instead).
 // =====================================================================
 
 const baseFields = {
@@ -35,7 +37,11 @@ const baseFields = {
 
 const sendSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('JOB_FINISHED'), ...baseFields }),
-  z.object({ type: z.literal('PARKING_WARNING'), ...baseFields }),
+  z.object({
+    type: z.literal('DIAGNOSTIC_COMPLETE'),
+    ...baseFields,
+    faultSummary: z.string().trim().max(300).optional(),
+  }),
   z.object({
     type: z.literal('UPSELL_REQUEST'),
     ...baseFields,
@@ -83,13 +89,11 @@ export async function POST(request: Request) {
   switch (data.type) {
     case 'JOB_FINISHED': {
       const totalAmount = job.total_parts_cost + job.total_labor_cost + job.accrued_parking_fees;
-      const parkingClause = `Besplatno parkiranje ${tenant.free_parking_days} dana nakon završetka radova, nakon čega se obračunava ležarina od ${formatEuroHR(tenant.daily_parking_fee)}/dan.`;
-      result = await sendJobFinishedNotification(data.jobId, totalAmount, parkingClause);
+      result = await sendJobFinishedNotification(data.jobId, totalAmount);
       break;
     }
-    case 'PARKING_WARNING': {
-      const parkedDays = daysSince(job.finished_at);
-      result = await sendParkingWarningNotification(data.jobId, parkedDays, job.accrued_parking_fees);
+    case 'DIAGNOSTIC_COMPLETE': {
+      result = await sendDiagnosticCompleteNotification(data.jobId, data.faultSummary ?? '');
       break;
     }
     case 'UPSELL_REQUEST': {

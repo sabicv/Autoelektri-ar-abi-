@@ -135,8 +135,7 @@ export async function logJobEvent(params: LogJobEventParams): Promise<void> {
 // ---------------------------------------------------------------------
 export async function sendJobFinishedNotification(
   jobId: string,
-  totalAmount: number,
-  parkingClause: string
+  totalAmount: number
 ): Promise<WhatsAppSendResult> {
   const { client, vehicle, tenant } = await loadJobDispatchContext(jobId);
 
@@ -155,7 +154,6 @@ export async function sendJobFinishedNotification(
             { type: 'text', text: client.first_name },
             { type: 'text', text: vehicleLabel(vehicle) },
             { type: 'text', text: formatEuroHR(totalAmount) },
-            { type: 'text', text: parkingClause },
           ],
         },
       ],
@@ -170,7 +168,53 @@ export async function sendJobFinishedNotification(
     message: result.success
       ? `WhatsApp obavijest o završetku posla poslana za ${vehicleLabel(vehicle)} (${formatEuroHR(totalAmount)}).`
       : `Slanje WhatsApp obavijesti o završetku posla nije uspjelo: ${result.error}`,
-    metadata: { notificationType: 'JOB_FINISHED', totalAmount, parkingClause, messageId: result.messageId },
+    metadata: { notificationType: 'JOB_FINISHED', totalAmount, messageId: result.messageId },
+  });
+
+  return result;
+}
+
+// ---------------------------------------------------------------------
+// sendDiagnosticCompleteNotification — informative status update, no
+// price, no urgency framing. Sent once the diagnostic workbench findings
+// are saved, before repair work (and its cost) is even known.
+// ---------------------------------------------------------------------
+export async function sendDiagnosticCompleteNotification(
+  jobId: string,
+  faultSummary: string
+): Promise<WhatsAppSendResult> {
+  const { client, vehicle, tenant } = await loadJobDispatchContext(jobId);
+
+  const templateName = process.env.WHATSAPP_TEMPLATE_DIAGNOSTIC_COMPLETE ?? 'diagnostic_complete';
+
+  const result = await sendMetaMessage({
+    to: toWhatsAppRecipient(client.phone_number),
+    type: 'template',
+    template: {
+      name: templateName,
+      language: { code: 'hr' },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: client.first_name },
+            { type: 'text', text: vehicleLabel(vehicle) },
+            { type: 'text', text: faultSummary || 'kvar je lociran' },
+          ],
+        },
+      ],
+    },
+  });
+
+  await logJobEvent({
+    tenantId: tenant.id,
+    jobId,
+    eventType: result.success ? 'WHATSAPP_SENT' : 'WHATSAPP_FAILED',
+    actor: 'system',
+    message: result.success
+      ? `WhatsApp obavijest o završenoj dijagnostici poslana za ${vehicleLabel(vehicle)}.`
+      : `Slanje obavijesti o dijagnostici nije uspjelo: ${result.error}`,
+    metadata: { notificationType: 'DIAGNOSTIC_COMPLETE', faultSummary, messageId: result.messageId },
   });
 
   return result;
@@ -278,53 +322,6 @@ export async function sendUpsellRequest(
       metadata: { notificationType: 'UPSELL_REQUEST', price, defectDescription, error: result.error },
     });
   }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------
-// sendParkingWarningNotification
-// ---------------------------------------------------------------------
-export async function sendParkingWarningNotification(
-  jobId: string,
-  daysParked: number,
-  accruedFee: number
-): Promise<WhatsAppSendResult> {
-  const { client, vehicle, tenant } = await loadJobDispatchContext(jobId);
-
-  const templateName = process.env.WHATSAPP_TEMPLATE_PARKING_WARNING ?? 'parking_warning';
-
-  const result = await sendMetaMessage({
-    to: toWhatsAppRecipient(client.phone_number),
-    type: 'template',
-    template: {
-      name: templateName,
-      language: { code: 'hr' },
-      components: [
-        {
-          type: 'body',
-          parameters: [
-            { type: 'text', text: client.first_name },
-            { type: 'text', text: vehicleLabel(vehicle) },
-            { type: 'text', text: String(daysParked) },
-            { type: 'text', text: formatEuroHR(accruedFee) },
-            { type: 'text', text: formatEuroHR(tenant.daily_parking_fee) },
-          ],
-        },
-      ],
-    },
-  });
-
-  await logJobEvent({
-    tenantId: tenant.id,
-    jobId,
-    eventType: result.success ? 'WHATSAPP_SENT' : 'WHATSAPP_FAILED',
-    actor: 'system',
-    message: result.success
-      ? `Upozorenje o ležarini poslano (${daysParked} dana, ${formatEuroHR(accruedFee)}).`
-      : `Slanje upozorenja o ležarini nije uspjelo: ${result.error}`,
-    metadata: { notificationType: 'PARKING_WARNING', daysParked, accruedFee, messageId: result.messageId },
-  });
 
   return result;
 }

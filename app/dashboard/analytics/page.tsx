@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
-import { AlertTriangle, Car, Clock, Euro, Wrench } from 'lucide-react';
+import { Car, Clock, Euro, PackageCheck, Wrench } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { formatEuroHR, vehicleLabel } from '@/lib/format';
+import { daysSince, formatEuroHR, vehicleLabel } from '@/lib/format';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import type { Client, Job, Vehicle } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +17,7 @@ function computeStats(jobs: Job[]) {
 
   const totalLaborRevenue = jobs.reduce((sum, j) => sum + j.total_labor_cost, 0);
   const totalPartsRevenue = jobs.reduce((sum, j) => sum + j.total_parts_cost, 0);
-  const totalParkingRevenue = jobs.reduce((sum, j) => sum + j.accrued_parking_fees, 0);
-  const totalRevenue = totalLaborRevenue + totalPartsRevenue + totalParkingRevenue;
+  const totalRevenue = totalLaborRevenue + totalPartsRevenue;
 
   const totalDiagnosticHours = jobs.reduce((sum, j) => sum + j.diagnostic_hours, 0);
   const totalRepairHours = jobs.reduce((sum, j) => sum + j.repair_hours, 0);
@@ -35,21 +33,20 @@ function computeStats(jobs: Job[]) {
 
   const occupiedSpots = jobs.filter((j) => j.status !== 'COLLECTED').length;
 
-  const flaggedParkingJobs = jobs
-    .filter((j) => j.accrued_parking_fees > 0)
-    .sort((a, b) => b.accrued_parking_fees - a.accrued_parking_fees);
+  const awaitingPickup = jobs
+    .filter((j) => j.status === 'FINISHED_AWAITING_PICKUP' && j.finished_at)
+    .sort((a, b) => new Date(a.finished_at as string).getTime() - new Date(b.finished_at as string).getTime());
 
   return {
     jobsCompletedThisMonth,
     totalLaborRevenue,
     totalPartsRevenue,
-    totalParkingRevenue,
     totalRevenue,
     totalDiagnosticHours,
     totalRepairHours,
     avgTurnaroundDays,
     occupiedSpots,
-    flaggedParkingJobs,
+    awaitingPickup,
   };
 }
 
@@ -111,7 +108,6 @@ export default async function AnalyticsPage() {
         <div className="space-y-2">
           <RevenueRow label="Rad (dijagnostika i popravak)" amount={stats.totalLaborRevenue} total={stats.totalRevenue} />
           <RevenueRow label="Dijelovi" amount={stats.totalPartsRevenue} total={stats.totalRevenue} />
-          <RevenueRow label="Ležarina" amount={stats.totalParkingRevenue} total={stats.totalRevenue} />
         </div>
         <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
           Ukupno sati dijagnostike: {stats.totalDiagnosticHours.toFixed(1)}h · Ukupno sati popravka:{' '}
@@ -122,20 +118,21 @@ export default async function AnalyticsPage() {
 
       <Card className="p-4">
         <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-          <AlertTriangle className="h-5 w-5 text-alarm-red" strokeWidth={2} /> Vozila s ležarinom — potreban pregled
+          <PackageCheck className="h-5 w-5 text-slate-400" strokeWidth={2} /> Vozila spremna za preuzimanje
         </h2>
 
-        {stats.flaggedParkingJobs.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Nema vozila s obračunatom ležarinom.</p>
+        {stats.awaitingPickup.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nema vozila koja čekaju preuzimanje.</p>
         ) : (
           <ul className="space-y-2">
-            {stats.flaggedParkingJobs.map((job) => {
+            {stats.awaitingPickup.map((job) => {
               const client = clientMap.get(job.client_id);
               const vehicle = vehicleMap.get(job.vehicle_id);
+              const days = daysSince(job.finished_at);
               return (
                 <li
                   key={job.id}
-                  className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 dark:border-red-500/30 dark:bg-red-500/10"
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-workshop-border dark:bg-workshop-surface-hover"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -145,7 +142,9 @@ export default async function AnalyticsPage() {
                       {vehicle ? vehicleLabel(vehicle) : 'Vozilo'}
                     </p>
                   </div>
-                  <Badge variant="emergency">{formatEuroHR(job.accrued_parking_fees)}</Badge>
+                  <span className="flex-shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
+                    {days} {days === 1 ? 'dan' : 'dana'}
+                  </span>
                 </li>
               );
             })}
