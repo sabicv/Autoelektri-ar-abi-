@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/parking-check",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

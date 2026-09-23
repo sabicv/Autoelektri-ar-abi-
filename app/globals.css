@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased transition-colors duration-200;
+}
+
+html.dark body {
+  @apply bg-workshop-dark text-slate-100;
+}
+
+/* Crisp, consistent focus rings across every interactive element instead
+   of the browser default outline — kept even for :focus-visible only so
+   mouse clicks stay clean while keyboard/switch access still gets a ring. */
+:focus-visible {
+  outline: 2px solid theme('colors.blue.500');
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+html.dark :focus-visible {
+  outline-color: theme('colors.electric-blue');
+}
+
+/* Tactile press feedback used across every tappable surface in the app. */
+.press-effect {
+  @apply transition-transform duration-100 active:scale-95;
+}
+
+::selection {
+  @apply bg-blue-200 text-blue-900;
+}
