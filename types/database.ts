@@ -119,6 +119,7 @@ export interface Database {
           notes: string | null;
           address: string | null;
           oib: string | null;
+          is_demo: boolean;
           created_at: string;
         };
         Insert: {
@@ -131,6 +132,7 @@ export interface Database {
           notes?: string | null;
           address?: string | null;
           oib?: string | null;
+          is_demo?: boolean;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['clients']['Insert']>;

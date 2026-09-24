@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -59,9 +60,14 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
-            Lozinka
-          </label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+              Lozinka
+            </label>
+            <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:text-blue-700">
+              Zaboravili ste lozinku?
+            </Link>
+          </div>
           <input
             id="password"
             type="password"

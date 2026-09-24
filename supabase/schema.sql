@@ -449,3 +449,15 @@ alter table public.clients add column if not exists address text;
 alter table public.clients add column if not exists oib text;
 
 comment on column public.clients.oib is 'Croatian OIB (11-digit tax id) — format-checked only (11 digits), not checksum-validated.';
+
+-- ---------------------------------------------------------------------
+-- 11. Sales-demo data support
+-- ---------------------------------------------------------------------
+
+-- Marks a client (and, by cascade, its vehicles/jobs/reports/events) as
+-- seeded sales-demo content rather than a real customer. /api/demo/reset
+-- only ever deletes and re-inserts rows with is_demo = true, so it can
+-- never touch real client data created through the normal intake flows.
+alter table public.clients add column if not exists is_demo boolean not null default false;
+
+comment on column public.clients.is_demo is 'true for curated demo dataset rows (see lib/demo-seed.ts); real clients are always false.';

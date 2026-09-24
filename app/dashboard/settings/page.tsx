@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import TenantSettingsForm from '@/components/dashboard/TenantSettingsForm';
+import DemoResetButton from '@/components/dashboard/DemoResetButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900">Postavke radionice</h1>
       <TenantSettingsForm tenant={tenant} />
+      <DemoResetButton />
     </div>
   );
 }
