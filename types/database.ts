@@ -199,6 +199,7 @@ export interface Database {
           accrued_parking_fees: number;
           finished_at: string | null;
           collected_at: string | null;
+          confirmed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -219,6 +220,7 @@ export interface Database {
           accrued_parking_fees?: number;
           finished_at?: string | null;
           collected_at?: string | null;
+          confirmed_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['jobs']['Insert']>;

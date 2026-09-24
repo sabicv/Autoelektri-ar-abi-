@@ -11,6 +11,7 @@ interface CostEditorProps {
   tenantId: string;
   initialLaborCost: number;
   initialPartsCost: number;
+  locked?: boolean;
   onSaved?: (laborCost: number, partsCost: number) => void;
 }
 
@@ -19,7 +20,14 @@ function parseEuro(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-export default function CostEditor({ jobId, tenantId, initialLaborCost, initialPartsCost, onSaved }: CostEditorProps) {
+export default function CostEditor({
+  jobId,
+  tenantId,
+  initialLaborCost,
+  initialPartsCost,
+  locked = false,
+  onSaved,
+}: CostEditorProps) {
   const [laborInput, setLaborInput] = useState(initialLaborCost ? String(initialLaborCost) : '');
   const [partsInput, setPartsInput] = useState(initialPartsCost ? String(initialPartsCost) : '');
   const [isSaving, setIsSaving] = useState(false);
@@ -69,8 +77,9 @@ export default function CostEditor({ jobId, tenantId, initialLaborCost, initialP
             inputMode="decimal"
             value={laborInput}
             onChange={(e) => setLaborInput(e.target.value.replace(/[^0-9,.-]/g, ''))}
+            disabled={locked}
             placeholder="0,00"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
           />
         </div>
         <div>
@@ -83,8 +92,9 @@ export default function CostEditor({ jobId, tenantId, initialLaborCost, initialP
             inputMode="decimal"
             value={partsInput}
             onChange={(e) => setPartsInput(e.target.value.replace(/[^0-9,.-]/g, ''))}
+            disabled={locked}
             placeholder="0,00"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
           />
         </div>
       </div>
@@ -93,15 +103,17 @@ export default function CostEditor({ jobId, tenantId, initialLaborCost, initialP
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Ukupno: <span className="font-bold text-slate-900 dark:text-slate-100">{formatEuroHR(laborCost + partsCost)}</span>
         </p>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2} />}
-          Spremi
-        </button>
+        {!locked && (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2} />}
+            Spremi
+          </button>
+        )}
       </div>
     </div>
   );

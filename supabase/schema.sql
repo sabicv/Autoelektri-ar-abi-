@@ -423,3 +423,17 @@ begin
 end $$;
 
 comment on column public.tenants.emergency_surcharge_percent is 'Default emergency surcharge percent applied to new jobs at intake; jobs.emergency_surcharge_percent stores what was actually charged for that job.';
+
+-- ---------------------------------------------------------------------
+-- 9. Draft-until-confirmed job records
+-- ---------------------------------------------------------------------
+
+-- NULL = draft, every field on the job (and its client/vehicle) stays
+-- freely editable from the job detail page. Once the mechanic taps
+-- "Potvrdi nalog", this is set and content (client/vehicle info, symptoms,
+-- diagnostic notes, work summary, cost) becomes read-only — status changes
+-- and photo uploads still work after confirmation, only the RECORDED
+-- CONTENT freezes, matching a finalized/audit-safe record.
+alter table public.jobs add column if not exists confirmed_at timestamptz;
+
+comment on column public.jobs.confirmed_at is 'When the mechanic locked the job record. NULL = still a draft (fully editable).';

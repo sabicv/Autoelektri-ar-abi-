@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Inbox, Plus } from 'lucide-react';
+import { Inbox, Plus, Search } from 'lucide-react';
 import JobCard from './JobCard';
 import NewJobModal from './NewJobModal';
+import { vehicleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Client, Job, Vehicle } from '@/types/database';
 
@@ -29,6 +30,7 @@ interface JobsBoardProps {
 
 export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoardProps) {
   const [filter, setFilter] = useState<Filter>('ACTIVE');
+  const [searchQuery, setSearchQuery] = useState('');
   const [jobList, setJobList] = useState(jobs);
   const [newJobOpen, setNewJobOpen] = useState(false);
 
@@ -44,24 +46,39 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
   const vehicleMap = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
   const filteredJobs = useMemo(() => {
-    switch (filter) {
-      case 'ACTIVE':
-        return jobList.filter((j) => j.status !== 'COLLECTED');
-      case 'DIAGNOSTIC':
-        return jobList.filter((j) => DIAGNOSTIC_STATUSES.includes(j.status));
-      case 'READY':
-        return jobList.filter((j) => j.status === 'FINISHED_AWAITING_PICKUP');
-      case 'COLLECTED':
-        return jobList.filter((j) => j.status === 'COLLECTED');
-      case 'ALL':
-      default:
-        return jobList;
-    }
-  }, [jobList, filter]);
+    const statusFiltered = jobList.filter((j) => {
+      switch (filter) {
+        case 'ACTIVE':
+          return j.status !== 'COLLECTED';
+        case 'DIAGNOSTIC':
+          return DIAGNOSTIC_STATUSES.includes(j.status);
+        case 'READY':
+          return j.status === 'FINISHED_AWAITING_PICKUP';
+        case 'COLLECTED':
+          return j.status === 'COLLECTED';
+        case 'ALL':
+        default:
+          return true;
+      }
+    });
 
-  function handleJobUpdated(updated: Job) {
-    setJobList((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
-  }
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return statusFiltered;
+
+    return statusFiltered.filter((job) => {
+      const client = clientMap.get(job.client_id);
+      const vehicle = vehicleMap.get(job.vehicle_id);
+      const haystack = [
+        client ? `${client.first_name} ${client.last_name}` : '',
+        client?.phone_number ?? '',
+        vehicle ? vehicleLabel(vehicle) : '',
+        vehicle?.vin ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [jobList, filter, searchQuery, clientMap, vehicleMap]);
 
   return (
     <div className="space-y-4">
@@ -72,6 +89,16 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
       >
         <Plus className="h-5 w-5" strokeWidth={2} /> Novi nalog
       </button>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Traži klijenta, telefon, registraciju ili VIN..."
+          className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
+        />
+      </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
         {FILTERS.map((f) => (
@@ -94,7 +121,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 py-16 text-slate-400 dark:border-workshop-border">
           <Inbox className="h-8 w-8" strokeWidth={2} />
-          <p className="text-sm">Nema poslova u ovoj kategoriji.</p>
+          <p className="text-sm">Nema poslova koji odgovaraju pretrazi.</p>
         </div>
       ) : (
         <motion.div layout className="space-y-3">
@@ -113,13 +140,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <JobCard
-                    job={job}
-                    clientName={`${client.first_name} ${client.last_name}`}
-                    clientPhone={client.phone_number}
-                    vehicle={vehicle}
-                    onUpdated={handleJobUpdated}
-                  />
+                  <JobCard job={job} clientName={`${client.first_name} ${client.last_name}`} vehicle={vehicle} />
                 </motion.div>
               );
             })}

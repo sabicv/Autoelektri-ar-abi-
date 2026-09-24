@@ -13,6 +13,7 @@ interface DiagnosticWorkbenchProps {
   jobId: string;
   tenantId: string;
   initialDiagnosticNotes: string | null;
+  locked?: boolean;
   onSaved?: (diagnosticNotes: string) => void;
 }
 
@@ -20,6 +21,7 @@ export default function DiagnosticWorkbench({
   jobId,
   tenantId,
   initialDiagnosticNotes,
+  locked = false,
   onSaved,
 }: DiagnosticWorkbenchProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -154,7 +156,12 @@ export default function DiagnosticWorkbench({
   }
 
   return (
-    <div className="space-y-4">
+    <fieldset disabled={locked} className="space-y-4">
+      {locked && (
+        <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+          Nalog je zaključan — nalaz se više ne može mijenjati.
+        </p>
+      )}
       {/* Battery drain — highlighted per spec, not buried among other fields */}
       <div className="flex items-center gap-3 rounded-xl border-2 border-electric-blue/30 bg-electric-blue/5 px-3 py-2.5 dark:border-electric-blue/40 dark:bg-electric-blue/10">
         <BatteryWarning className="h-5 w-5 flex-shrink-0 text-electric-blue" strokeWidth={2} />
@@ -295,15 +302,17 @@ export default function DiagnosticWorkbench({
         />
       </div>
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={isSaving}
-        className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-      >
-        {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2} />}
-        {isSaving ? 'Spremanje…' : 'Spremi dijagnostički nalaz'}
-      </button>
-    </div>
+      {!locked && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
+        >
+          {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2} />}
+          {isSaving ? 'Spremanje…' : 'Spremi dijagnostički nalaz'}
+        </button>
+      )}
+    </fieldset>
   );
 }
