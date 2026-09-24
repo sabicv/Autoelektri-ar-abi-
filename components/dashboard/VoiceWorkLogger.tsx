@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Mic, MicOff, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -53,63 +52,35 @@ export default function VoiceWorkLogger({ jobId, tenantId, initialWorkSummary, o
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={toggleRecording}
-          disabled={!isSupported}
-          className={cn(
-            'press-effect relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-            isRecording ? 'bg-alarm-red' : 'bg-blue-600 dark:bg-electric-blue dark:text-workshop-dark'
-          )}
-          aria-label={isRecording ? 'Zaustavi snimanje' : 'Pokreni glasovni unos'}
-        >
-          {isRecording && (
-            <>
-              <span className="absolute inset-0 -m-2 animate-ping rounded-full bg-alarm-red/40" />
-              <span className="absolute inset-0 -m-4 animate-ping rounded-full bg-alarm-red/20 [animation-delay:200ms]" />
-            </>
-          )}
-          {isRecording ? (
-            <MicOff className="relative h-6 w-6" strokeWidth={2} />
-          ) : (
-            <Mic className="relative h-6 w-6" strokeWidth={2} />
-          )}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          {!isSupported ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Glasovni unos nije podržan u ovom pregledniku — koristite tipkovnicu ispod.
-            </p>
-          ) : isRecording ? (
-            <AnimatePresence mode="wait">
-              <motion.p
-                key="listening"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2 text-sm font-medium text-electric-blue"
-              >
-                Transkripcija uz AI
-                <span className="flex gap-0.5">
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:150ms]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:300ms]" />
-                </span>
-              </motion.p>
-            </AnimatePresence>
-          ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Dodirnite mikrofon za glasovni unos zapisa rada.
-            </p>
-          )}
-          {interimText && <p className="mt-1 truncate text-xs italic text-slate-400">{interimText}</p>}
-        </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label htmlFor="workSummary" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Opis izvedenih radova
+        </label>
+        {isSupported && (
+          <button
+            type="button"
+            onClick={toggleRecording}
+            className={cn(
+              'press-effect flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold',
+              isRecording
+                ? 'bg-alarm-red text-white'
+                : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'
+            )}
+          >
+            {isRecording ? <MicOff className="h-3.5 w-3.5" strokeWidth={2} /> : <Mic className="h-3.5 w-3.5" strokeWidth={2} />}
+            {isRecording ? 'Zaustavi' : 'Diktiraj'}
+          </button>
+        )}
       </div>
 
+      {!isSupported && (
+        <p className="text-xs text-slate-400 dark:text-slate-500">Glasovni unos nije podržan u ovom pregledniku.</p>
+      )}
+      {interimText && <p className="truncate text-xs italic text-slate-400">{interimText}</p>}
+
       <textarea
+        id="workSummary"
         rows={4}
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
@@ -121,9 +92,9 @@ export default function VoiceWorkLogger({ jobId, tenantId, initialWorkSummary, o
         type="button"
         onClick={handleSave}
         disabled={isSaving}
-        className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
+        className="press-effect flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
       >
-        {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2} />}
+        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2} />}
         {isSaving ? 'Spremanje…' : 'Spremi zapis rada'}
       </button>
     </div>

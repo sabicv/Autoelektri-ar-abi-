@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { BatteryWarning, Loader2, Plus, Save, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BatteryWarning, Loader2, Mic, MicOff, Plus, Save, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { searchDtcCodes } from '@/lib/dtc-codes';
+import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
 import Skeleton from '@/components/ui/Skeleton';
 
@@ -35,6 +36,17 @@ export default function DiagnosticWorkbench({
     () => searchDtcCodes(dtcInput).filter((s) => !dtcCodes.includes(s.code)),
     [dtcInput, dtcCodes]
   );
+
+  const handleDiagnosticNotesDictation = useCallback((final: string) => {
+    setDiagnosticNotes((prev) => (prev ? `${prev} ${final}`.trim() : final.trim()));
+  }, []);
+
+  const {
+    isSupported: dictationSupported,
+    isRecording: isDictatingNotes,
+    interimText: notesInterimText,
+    toggleRecording: toggleNotesDictation,
+  } = useSpeechToText({ onFinalText: handleDiagnosticNotesDictation });
 
   useEffect(() => {
     let cancelled = false;
@@ -252,9 +264,27 @@ export default function DiagnosticWorkbench({
       </div>
 
       <div>
-        <label htmlFor="diagnosticNotes" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-          Dijagnostičke napomene (scope očitanja, integritet instalacije)
-        </label>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label htmlFor="diagnosticNotes" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Dijagnostičke napomene (scope očitanja, integritet instalacije)
+          </label>
+          {dictationSupported && (
+            <button
+              type="button"
+              onClick={toggleNotesDictation}
+              className={cn(
+                'press-effect flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold',
+                isDictatingNotes
+                  ? 'bg-alarm-red text-white'
+                  : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'
+              )}
+            >
+              {isDictatingNotes ? <MicOff className="h-3.5 w-3.5" strokeWidth={2} /> : <Mic className="h-3.5 w-3.5" strokeWidth={2} />}
+              {isDictatingNotes ? 'Zaustavi' : 'Diktiraj'}
+            </button>
+          )}
+        </div>
+        {notesInterimText && <p className="mb-1 truncate text-xs italic text-slate-400">{notesInterimText}</p>}
         <textarea
           id="diagnosticNotes"
           rows={3}
