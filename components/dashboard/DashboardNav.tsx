@@ -42,7 +42,7 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
+    <header className="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2">
         <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{tenantName}</span>
 

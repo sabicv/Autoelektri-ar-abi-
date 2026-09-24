@@ -1,38 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Mic, MicOff, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
-
-// Minimal shape of the Web Speech API we actually use — not part of
-// lib.dom.d.ts, and support varies (Chrome/Edge/Safari; no Firefox), so
-// this is feature-detected and typed just enough to avoid `any` leaking
-// through the component body.
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
-}
-interface SpeechRecognitionResultLike {
-  0: SpeechRecognitionAlternativeLike;
-  isFinal: boolean;
-}
-interface SpeechRecognitionEventLike {
-  resultIndex: number;
-  results: ArrayLike<SpeechRecognitionResultLike>;
-}
-interface SpeechRecognitionLike {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 interface VoiceWorkLoggerProps {
   jobId: string;
@@ -42,74 +16,16 @@ interface VoiceWorkLoggerProps {
 }
 
 export default function VoiceWorkLogger({ jobId, tenantId, initialWorkSummary, onSaved }: VoiceWorkLoggerProps) {
-  const [isSupported, setIsSupported] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [interimText, setInterimText] = useState('');
   const [summary, setSummary] = useState(initialWorkSummary ?? '');
   const [isSaving, setIsSaving] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  useEffect(() => {
-    const w = window as unknown as {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-
-    if (!Ctor) {
-      setIsSupported(false);
-      return;
-    }
-
-    const recognition = new Ctor();
-    recognition.lang = 'hr-HR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event) => {
-      let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
-        } else {
-          interim += result[0].transcript;
-        }
-      }
-      if (final) {
-        setSummary((prev) => (prev ? `${prev} ${final}`.trim() : final.trim()));
-      }
-      setInterimText(interim);
-    };
-
-    recognition.onerror = () => {
-      setIsRecording(false);
-      toast.error('Prepoznavanje govora je prekinuto.');
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      setInterimText('');
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-    };
+  const handleFinalText = useCallback((final: string) => {
+    setSummary((prev) => (prev ? `${prev} ${final}`.trim() : final.trim()));
   }, []);
 
-  function toggleRecording() {
-    if (!recognitionRef.current) return;
-    if (isRecording) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
-    } else {
-      recognitionRef.current.start();
-      setIsRecording(true);
-    }
-  }
+  const { isSupported, isRecording, interimText, toggleRecording } = useSpeechToText({
+    onFinalText: handleFinalText,
+  });
 
   async function handleSave() {
     setIsSaving(true);

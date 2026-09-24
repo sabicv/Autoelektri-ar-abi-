@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Car, ChevronDown, Clock, KeyRound, Phone, Stethoscope, Wrench, Zap } from 'lucide-react';
+import { Bell, Car, ChevronDown, Clock, KeyRound, Phone, Printer, Stethoscope, Wrench, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
 import Badge, { type BadgeVariant } from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
+import CostEditor from './CostEditor';
 import DiagnosticWorkbench from './DiagnosticWorkbench';
 import VoiceWorkLogger from './VoiceWorkLogger';
 import JobPhotoVault from './JobPhotoVault';
 import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
 import SmartLockboxModal from './SmartLockboxModal';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { daysSince, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Job, JobStatus, JobUpdate } from '@/types/database';
 
@@ -160,11 +161,18 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
               className="overflow-hidden border-t border-slate-100 dark:border-workshop-border"
             >
               <div className="space-y-5 px-4 py-4">
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <Stat label="Rad" value={formatEuroHR(currentJob.total_labor_cost)} />
-                  <Stat label="Dijelovi" value={formatEuroHR(currentJob.total_parts_cost)} />
-                  <Stat label="Ukupno" value={formatEuroHR(totalCost)} emphasis />
-                </div>
+                <section>
+                  <h3 className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">Cijena</h3>
+                  <CostEditor
+                    jobId={currentJob.id}
+                    tenantId={currentJob.tenant_id}
+                    initialLaborCost={currentJob.total_labor_cost}
+                    initialPartsCost={currentJob.total_parts_cost}
+                    onSaved={(laborCost, partsCost) =>
+                      setCurrentJob((prev) => ({ ...prev, total_labor_cost: laborCost, total_parts_cost: partsCost }))
+                    }
+                  />
+                </section>
 
                 <div className="flex flex-wrap gap-2">
                   <a
@@ -176,6 +184,14 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
                   <Button variant="secondary" size="sm" onClick={() => setStatusDrawerOpen(true)}>
                     Promijeni status
                   </Button>
+                  <a
+                    href={`/dashboard/jobs/${currentJob.id}/nalog`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="press-effect inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
+                  >
+                    <Printer className="h-4 w-4" strokeWidth={2} /> Radni nalog
+                  </a>
                   {DIAGNOSTIC_PHASE_STATUSES.includes(currentJob.status) && (
                     <Button variant="outline" size="sm" onClick={() => setNotificationType('DIAGNOSTIC_COMPLETE')}>
                       <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova
@@ -276,16 +292,5 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
         />
       )}
     </motion.div>
-  );
-}
-
-function Stat({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
-  return (
-    <div>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={cn('font-bold text-slate-900 dark:text-slate-100', emphasis && 'text-blue-600 dark:text-electric-blue')}>
-        {value}
-      </p>
-    </div>
   );
 }

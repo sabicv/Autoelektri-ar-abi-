@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Inbox } from 'lucide-react';
+import { Inbox, Plus } from 'lucide-react';
 import JobCard from './JobCard';
+import NewJobModal from './NewJobModal';
 import { cn } from '@/lib/utils';
 import type { Client, Job, Vehicle } from '@/types/database';
 
@@ -28,6 +29,15 @@ interface JobsBoardProps {
 export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [jobList, setJobList] = useState(jobs);
+  const [newJobOpen, setNewJobOpen] = useState(false);
+
+  // Keep local state in sync when the server refetches (e.g. after
+  // creating a new job triggers router.refresh()) — useState's initial
+  // value only applies on first mount, so without this a freshly created
+  // job wouldn't appear until a full page reload.
+  useEffect(() => {
+    setJobList(jobs);
+  }, [jobs]);
 
   const clientMap = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
   const vehicleMap = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
@@ -54,6 +64,14 @@ export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
 
   return (
     <div className="space-y-4">
+      <button
+        type="button"
+        onClick={() => setNewJobOpen(true)}
+        className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white dark:bg-electric-blue dark:text-workshop-dark"
+      >
+        <Plus className="h-5 w-5" strokeWidth={2} /> Novi nalog
+      </button>
+
       <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
         {FILTERS.map((f) => (
           <button
@@ -107,6 +125,8 @@ export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
           </AnimatePresence>
         </motion.div>
       )}
+
+      <NewJobModal open={newJobOpen} onClose={() => setNewJobOpen(false)} />
     </div>
   );
 }
