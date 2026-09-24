@@ -24,9 +24,10 @@ interface JobsBoardProps {
   jobs: Job[];
   clients: Client[];
   vehicles: Vehicle[];
+  tenantId: string;
 }
 
-export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
+export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoardProps) {
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [jobList, setJobList] = useState(jobs);
   const [newJobOpen, setNewJobOpen] = useState(false);
@@ -126,7 +127,7 @@ export default function JobsBoard({ jobs, clients, vehicles }: JobsBoardProps) {
         </motion.div>
       )}
 
-      <NewJobModal open={newJobOpen} onClose={() => setNewJobOpen(false)} />
+      <NewJobModal open={newJobOpen} onClose={() => setNewJobOpen(false)} tenantId={tenantId} />
     </div>
   );
 }

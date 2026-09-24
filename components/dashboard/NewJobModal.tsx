@@ -2,9 +2,10 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Loader2, Mic, MicOff, Send } from 'lucide-react';
+import { AlertCircle, Loader2, Mic, MicOff, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
+import PhotoUploadDropzone, { type UploadedPhoto } from '@/components/triage/PhotoUploadDropzone';
 import { COUNTRY_CODES, SYMPTOM_OPTIONS, type SymptomCode } from '@/lib/validation/triage';
 import { newJobSchema } from '@/lib/validation/newJob';
 import { useSpeechToText } from '@/lib/useSpeechToText';
@@ -13,6 +14,17 @@ import { cn } from '@/lib/utils';
 interface NewJobModalProps {
   open: boolean;
   onClose: () => void;
+  tenantId: string;
+}
+
+interface ExtractedFields {
+  firstName: string | null;
+  lastName: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  vin: string | null;
+  registrationPlate: string | null;
 }
 
 interface FormValues {
@@ -45,11 +57,13 @@ const initialValues: FormValues = {
   isEmergency: false,
 };
 
-export default function NewJobModal({ open, onClose }: NewJobModalProps) {
+export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProps) {
   const router = useRouter();
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationPhotos, setRegistrationPhotos] = useState<UploadedPhoto[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleFinalText = useCallback((final: string) => {
     setValues((prev) => ({
@@ -76,7 +90,46 @@ export default function NewJobModal({ open, onClose }: NewJobModalProps) {
   function resetAndClose() {
     setValues(initialValues);
     setErrors({});
+    setRegistrationPhotos([]);
     onClose();
+  }
+
+  async function analyzeRegistrationCard(photo: UploadedPhoto) {
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch('/api/vision/registration-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoPath: photo.path }),
+      });
+      const json = await response.json();
+
+      if (!response.ok) {
+        toast.error(json.error ?? 'AI čitanje dokumenta nije uspjelo. Upišite podatke ručno.');
+        return;
+      }
+
+      const fields = json.fields as ExtractedFields;
+
+      // Only fill fields the mechanic hasn't already typed — never
+      // silently overwrite something they've already entered by hand.
+      setValues((prev) => ({
+        ...prev,
+        firstName: prev.firstName || fields.firstName || '',
+        lastName: prev.lastName || fields.lastName || '',
+        make: prev.make || fields.make || '',
+        model: prev.model || fields.model || '',
+        year: prev.year || (fields.year ? String(fields.year) : ''),
+        vin: prev.vin || fields.vin || '',
+        registrationPlate: prev.registrationPlate || fields.registrationPlate || '',
+      }));
+
+      toast.success('Podaci pročitani s prometne — provjerite prije spremanja.');
+    } catch {
+      toast.error('AI čitanje dokumenta nije uspjelo. Upišite podatke ručno.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -142,6 +195,29 @@ export default function NewJobModal({ open, onClose }: NewJobModalProps) {
         </DrawerTitle>
 
         <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+          <div className="rounded-xl border border-dashed border-blue-300 bg-blue-50/50 p-3 dark:border-electric-blue/30 dark:bg-electric-blue/5">
+            <PhotoUploadDropzone
+              tenantId={tenantId}
+              tag="REGISTRATION_CARD"
+              label="Slikaj prometnu (AI popuni podatke)"
+              hint="Fotografirajte prometnu dozvolu — ime, marka, model, VIN i registracija će se pokušati automatski pročitati."
+              maxFiles={1}
+              photos={registrationPhotos}
+              onChange={(next) => {
+                const isNewPhoto = next.length > registrationPhotos.length;
+                setRegistrationPhotos(next);
+                if (isNewPhoto) {
+                  analyzeRegistrationCard(next[next.length - 1]);
+                }
+              }}
+            />
+            {isAnalyzing && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-electric-blue">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" strokeWidth={2} /> AI čita dokument…
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Ime" error={errors.firstName}>
               <input

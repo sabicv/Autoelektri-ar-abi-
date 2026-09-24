@@ -28,7 +28,7 @@ export default async function JobsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Poslovi</h1>
-      <JobsBoard jobs={jobs ?? []} clients={clients ?? []} vehicles={vehicles ?? []} />
+      <JobsBoard jobs={jobs ?? []} clients={clients ?? []} vehicles={vehicles ?? []} tenantId={tenant.id} />
     </div>
   );
 }

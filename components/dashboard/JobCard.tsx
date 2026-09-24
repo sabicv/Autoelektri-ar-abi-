@@ -12,6 +12,7 @@ import CostEditor from './CostEditor';
 import DiagnosticWorkbench from './DiagnosticWorkbench';
 import VoiceWorkLogger from './VoiceWorkLogger';
 import JobPhotoVault from './JobPhotoVault';
+import JobPhotoUploader from './JobPhotoUploader';
 import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
 import SmartLockboxModal from './SmartLockboxModal';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -60,6 +61,7 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
+  const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
 
   const totalCost = currentJob.total_labor_cost + currentJob.total_parts_cost + currentJob.accrued_parking_fees;
   const daysParked = currentJob.finished_at ? daysSince(currentJob.finished_at) : 0;
@@ -235,7 +237,14 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
 
                 <section>
                   <h3 className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">Foto arhiv</h3>
-                  <JobPhotoVault jobId={currentJob.id} />
+                  <div className="space-y-3">
+                    <JobPhotoVault key={photoRefreshKey} jobId={currentJob.id} />
+                    <JobPhotoUploader
+                      jobId={currentJob.id}
+                      tenantId={currentJob.tenant_id}
+                      onUploaded={() => setPhotoRefreshKey((k) => k + 1)}
+                    />
+                  </div>
                 </section>
               </div>
             </motion.div>
