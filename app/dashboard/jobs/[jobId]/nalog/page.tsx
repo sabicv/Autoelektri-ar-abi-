@@ -61,6 +61,12 @@ export default async function WorkOrderPage({ params }: PageProps) {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Klijent</p>
             <p className="mt-1 font-semibold">{client.first_name} {client.last_name}</p>
             <p className="text-sm text-slate-500 dark:text-slate-400 dark:print:text-slate-500">{client.phone_number}</p>
+            {client.address && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:print:text-slate-500">{client.address}</p>
+            )}
+            {client.oib && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:print:text-slate-500">OIB: {client.oib}</p>
+            )}
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vozilo</p>

@@ -15,6 +15,7 @@ interface NewJobModalProps {
   open: boolean;
   onClose: () => void;
   tenantId: string;
+  title?: string;
 }
 
 interface ExtractedFields {
@@ -40,6 +41,8 @@ interface FormValues {
   symptoms: SymptomCode[];
   description: string;
   isEmergency: boolean;
+  address: string;
+  oib: string;
 }
 
 const initialValues: FormValues = {
@@ -55,14 +58,17 @@ const initialValues: FormValues = {
   symptoms: [],
   description: '',
   isEmergency: false,
+  address: '',
+  oib: '',
 };
 
-export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProps) {
+export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nalog' }: NewJobModalProps) {
   const router = useRouter();
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationPhotos, setRegistrationPhotos] = useState<UploadedPhoto[]>([]);
+  const [intakePhotos, setIntakePhotos] = useState<UploadedPhoto[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleFinalText = useCallback((final: string) => {
@@ -91,6 +97,7 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
     setValues(initialValues);
     setErrors({});
     setRegistrationPhotos([]);
+    setIntakePhotos([]);
     onClose();
   }
 
@@ -148,6 +155,9 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
       symptoms: values.symptoms,
       description: values.description || undefined,
       isEmergency: values.isEmergency,
+      address: values.address || undefined,
+      oib: values.oib || undefined,
+      photos: [...registrationPhotos, ...intakePhotos].map(({ path, tag }) => ({ path, tag })),
     };
 
     const parsed = newJobSchema.safeParse(payload);
@@ -178,6 +188,9 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
       }
 
       toast.success(`Nalog kreiran: ${json.jobReference}`);
+      if (json.photoWarnings?.length > 0) {
+        toast.error('Neke fotografije nisu uspješno spremljene — dodajte ih naknadno na nalogu.');
+      }
       resetAndClose();
       router.refresh();
     } catch {
@@ -191,7 +204,7 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
     <Drawer open={open} onOpenChange={(next) => !next && resetAndClose()}>
       <DrawerContent className="max-h-[95dvh]">
         <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
-          Novi nalog
+          {title}
         </DrawerTitle>
 
         <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
@@ -216,6 +229,18 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
                 <Sparkles className="h-3.5 w-3.5 animate-pulse" strokeWidth={2} /> AI čita dokument…
               </p>
             )}
+          </div>
+
+          <div className="rounded-xl border border-dashed border-slate-300 p-3 dark:border-workshop-border">
+            <PhotoUploadDropzone
+              tenantId={tenantId}
+              tag="INTAKE_CONDITION"
+              label="Slikaj vozilo (opcionalno)"
+              hint="Stanje vozila pri prijemu — do 4 fotografije."
+              maxFiles={4}
+              photos={intakePhotos}
+              onChange={setIntakePhotos}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -260,6 +285,27 @@ export default function NewJobModal({ open, onClose, tenantId }: NewJobModalProp
               />
             </div>
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Adresa (za račun, opcionalno)" error={errors.address}>
+              <input
+                value={values.address}
+                onChange={(e) => update('address', e.target.value)}
+                className={inputClass(!!errors.address)}
+                placeholder="Ulica i broj, grad"
+              />
+            </Field>
+            <Field label="OIB (opcionalno)" error={errors.oib}>
+              <input
+                inputMode="numeric"
+                maxLength={11}
+                value={values.oib}
+                onChange={(e) => update('oib', e.target.value.replace(/[^0-9]/g, ''))}
+                className={inputClass(!!errors.oib)}
+                placeholder="11 znamenki"
+              />
+            </Field>
+          </div>
 
           <Field label="Registarska oznaka" error={errors.registrationPlate}>
             <input

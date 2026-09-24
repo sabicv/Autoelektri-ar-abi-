@@ -32,6 +32,8 @@ export default function ClientVehicleEditor({
   const [firstName, setFirstName] = useState(client.first_name);
   const [lastName, setLastName] = useState(client.last_name);
   const [phoneNumber, setPhoneNumber] = useState(client.phone_number);
+  const [address, setAddress] = useState(client.address ?? '');
+  const [oib, setOib] = useState(client.oib ?? '');
   const [make, setMake] = useState(vehicle.make ?? '');
   const [model, setModel] = useState(vehicle.model ?? '');
   const [year, setYear] = useState(vehicle.year ? String(vehicle.year) : '');
@@ -53,7 +55,13 @@ export default function ClientVehicleEditor({
     const [clientRes, vehicleRes, jobRes] = await Promise.all([
       supabase
         .from('clients')
-        .update({ first_name: firstName, last_name: lastName, phone_number: phoneNumber })
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          phone_number: phoneNumber,
+          address: address || null,
+          oib: oib || null,
+        })
         .eq('id', client.id)
         .select('*')
         .single(),
@@ -144,6 +152,31 @@ export default function ClientVehicleEditor({
           disabled={locked}
           className={inputClass(locked)}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Adresa (za račun)
+          </label>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            disabled={locked}
+            className={inputClass(locked)}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">OIB</label>
+          <input
+            inputMode="numeric"
+            maxLength={11}
+            value={oib}
+            onChange={(e) => setOib(e.target.value.replace(/[^0-9]/g, ''))}
+            disabled={locked}
+            className={inputClass(locked)}
+          />
+        </div>
       </div>
 
       <div>

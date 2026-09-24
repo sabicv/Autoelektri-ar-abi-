@@ -29,7 +29,9 @@ create or replace function public.submit_triage_intake(
   p_vin text,
   p_symptoms text[],
   p_description text,
-  p_is_emergency boolean
+  p_is_emergency boolean,
+  p_address text default null,
+  p_oib text default null
 )
 returns table (job_id uuid, tenant_id uuid, job_reference text)
 language plpgsql
@@ -50,12 +52,17 @@ begin
     raise exception 'TENANT_NOT_FOUND: %', p_tenant_slug;
   end if;
 
-  insert into public.clients (tenant_id, first_name, last_name, phone_number)
-  values (v_tenant_id, p_first_name, p_last_name, p_phone_number)
+  -- address/oib default to null on the public triage form (never asked of
+  -- a customer at the garage door) — coalesce-on-conflict so a later
+  -- staff-entered value is never wiped by a subsequent anon resubmission.
+  insert into public.clients (tenant_id, first_name, last_name, phone_number, address, oib)
+  values (v_tenant_id, p_first_name, p_last_name, p_phone_number, p_address, p_oib)
   on conflict (tenant_id, phone_number)
   do update set
     first_name = excluded.first_name,
-    last_name = excluded.last_name
+    last_name = excluded.last_name,
+    address = coalesce(excluded.address, public.clients.address),
+    oib = coalesce(excluded.oib, public.clients.oib)
   returning id into v_client_id;
 
   insert into public.vehicles (tenant_id, client_id, registration_plate, make, model, year, vin)

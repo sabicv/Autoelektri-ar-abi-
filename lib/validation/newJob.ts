@@ -40,6 +40,22 @@ export const newJobSchema = z.object({
   symptoms: z.array(z.enum(SYMPTOM_CODES)).default([]),
   description: z.string().trim().max(2000, 'Opis je predugačak.').optional(),
   isEmergency: z.boolean().default(false),
+  address: z.string().trim().max(200, 'Adresa je predugačka.').optional(),
+  oib: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{11}$/, 'OIB mora imati točno 11 znamenki.')
+    .optional()
+    .or(z.literal('')),
+  photos: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        tag: z.enum(['INTAKE_CONDITION', 'REGISTRATION_CARD']),
+      })
+    )
+    .max(8, 'Previše fotografija.')
+    .default([]),
 });
 
 export type NewJobValues = z.infer<typeof newJobSchema>;

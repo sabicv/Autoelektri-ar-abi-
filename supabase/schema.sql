@@ -437,3 +437,15 @@ comment on column public.tenants.emergency_surcharge_percent is 'Default emergen
 alter table public.jobs add column if not exists confirmed_at timestamptz;
 
 comment on column public.jobs.confirmed_at is 'When the mechanic locked the job record. NULL = still a draft (fully editable).';
+
+-- ---------------------------------------------------------------------
+-- 10. Invoice-relevant client fields
+-- ---------------------------------------------------------------------
+
+-- Address and OIB (Croatian personal/company tax id) — collected by staff
+-- when useful for a work order / future fiscal invoice, never required on
+-- the public QR triage form.
+alter table public.clients add column if not exists address text;
+alter table public.clients add column if not exists oib text;
+
+comment on column public.clients.oib is 'Croatian OIB (11-digit tax id) — format-checked only (11 digits), not checksum-validated.';

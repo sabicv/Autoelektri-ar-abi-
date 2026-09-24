@@ -117,6 +117,8 @@ export interface Database {
           phone_number: string;
           email: string | null;
           notes: string | null;
+          address: string | null;
+          oib: string | null;
           created_at: string;
         };
         Insert: {
@@ -127,6 +129,8 @@ export interface Database {
           phone_number: string;
           email?: string | null;
           notes?: string | null;
+          address?: string | null;
+          oib?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['clients']['Insert']>;
@@ -368,6 +372,8 @@ export interface Database {
           p_symptoms: string[];
           p_description: string | null;
           p_is_emergency: boolean;
+          p_address?: string | null;
+          p_oib?: string | null;
         };
         Returns: { job_id: string; tenant_id: string; job_reference: string }[];
       };
