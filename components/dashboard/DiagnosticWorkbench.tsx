@@ -259,7 +259,7 @@ export default function DiagnosticWorkbench({
           value={moduleNotes}
           onChange={(e) => setModuleNotes(e.target.value)}
           placeholder="Npr. vozilo ulazi u sleep mod nakon 40 min, CAN-bus integritet uredan..."
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
 
@@ -273,13 +273,13 @@ export default function DiagnosticWorkbench({
               type="button"
               onClick={toggleNotesDictation}
               className={cn(
-                'press-effect flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold',
+                'press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
                 isDictatingNotes
                   ? 'bg-alarm-red text-white'
                   : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'
               )}
             >
-              {isDictatingNotes ? <MicOff className="h-3.5 w-3.5" strokeWidth={2} /> : <Mic className="h-3.5 w-3.5" strokeWidth={2} />}
+              {isDictatingNotes ? <MicOff className="h-4 w-4" strokeWidth={2} /> : <Mic className="h-4 w-4" strokeWidth={2} />}
               {isDictatingNotes ? 'Zaustavi' : 'Diktiraj'}
             </button>
           )}
@@ -291,7 +291,7 @@ export default function DiagnosticWorkbench({
           value={diagnosticNotes}
           onChange={(e) => setDiagnosticNotes(e.target.value)}
           placeholder="Nalaz dijagnostike — odvojeno od popisa izvedenih radova ispod."
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
 

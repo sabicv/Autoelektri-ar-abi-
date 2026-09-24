@@ -62,13 +62,13 @@ export default function VoiceWorkLogger({ jobId, tenantId, initialWorkSummary, o
             type="button"
             onClick={toggleRecording}
             className={cn(
-              'press-effect flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold',
+              'press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
               isRecording
                 ? 'bg-alarm-red text-white'
                 : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'
             )}
           >
-            {isRecording ? <MicOff className="h-3.5 w-3.5" strokeWidth={2} /> : <Mic className="h-3.5 w-3.5" strokeWidth={2} />}
+            {isRecording ? <MicOff className="h-4 w-4" strokeWidth={2} /> : <Mic className="h-4 w-4" strokeWidth={2} />}
             {isRecording ? 'Zaustavi' : 'Diktiraj'}
           </button>
         )}
@@ -85,7 +85,7 @@ export default function VoiceWorkLogger({ jobId, tenantId, initialWorkSummary, o
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
         placeholder="Opis izvedenih radova…"
-        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
       />
 
       <button

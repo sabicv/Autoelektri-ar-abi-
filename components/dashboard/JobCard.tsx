@@ -238,7 +238,7 @@ export default function JobCard({ job, clientName, clientPhone, vehicle, onUpdat
                 <section>
                   <h3 className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">Foto arhiv</h3>
                   <div className="space-y-3">
-                    <JobPhotoVault key={photoRefreshKey} jobId={currentJob.id} />
+                    <JobPhotoVault key={photoRefreshKey} jobId={currentJob.id} allowDelete />
                     <JobPhotoUploader
                       jobId={currentJob.id}
                       tenantId={currentJob.tenant_id}

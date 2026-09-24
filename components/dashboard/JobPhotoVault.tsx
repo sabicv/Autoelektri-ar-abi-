@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
 import Skeleton from '@/components/ui/Skeleton';
@@ -9,11 +10,16 @@ import PhotoLightbox, { type LightboxPhoto } from './PhotoLightbox';
 
 interface JobPhotoVaultProps {
   jobId: string;
+  // Off by default — the vehicle passport (VehicleHistoryTimeline) shows
+  // this as an immutable historical record and should never allow
+  // deletion there. Only the active job card (JobCard) enables it.
+  allowDelete?: boolean;
 }
 
-export default function JobPhotoVault({ jobId }: JobPhotoVaultProps) {
+export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVaultProps) {
   const [photos, setPhotos] = useState<LightboxPhoto[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +51,7 @@ export default function JobPhotoVault({ jobId }: JobPhotoVaultProps) {
       setPhotos(
         rows.map((r) => ({
           id: r.id,
+          path: r.photo_url,
           url: urlByPath.get(r.photo_url) ?? '',
           tag: r.tag,
           caption: r.caption,
@@ -58,6 +65,27 @@ export default function JobPhotoVault({ jobId }: JobPhotoVaultProps) {
       cancelled = true;
     };
   }, [jobId]);
+
+  async function handleDelete(photo: LightboxPhoto) {
+    if (!window.confirm('Trajno obrisati ovu fotografiju iz arhiva?')) return;
+
+    setDeletingId(photo.id);
+    const supabase = createBrowserSupabaseClient();
+
+    await supabase.storage.from('job-vault').remove([photo.path]);
+    const { error } = await supabase.from('job_photos').delete().eq('id', photo.id);
+
+    setDeletingId(null);
+
+    if (error) {
+      toast.error('Brisanje fotografije nije uspjelo.');
+      return;
+    }
+
+    setPhotos((prev) => (prev ? prev.filter((p) => p.id !== photo.id) : prev));
+    setLightboxIndex(null);
+    toast.success('Fotografija obrisana.');
+  }
 
   if (photos === null) {
     return (
@@ -82,20 +110,37 @@ export default function JobPhotoVault({ jobId }: JobPhotoVaultProps) {
     <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {photos.map((photo, i) => (
-          <button
+          <div
             key={photo.id}
-            type="button"
-            onClick={() => setLightboxIndex(i)}
-            className="press-effect relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
+            className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
           >
-            {photo.url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo.url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} className="h-full w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(i)}
+              className="press-effect block h-full w-full"
+              aria-label="Prikaži fotografiju"
+            >
+              {photo.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo.url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} className="h-full w-full object-cover" />
+              )}
+              <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
+                {PHOTO_TAG_LABELS_HR[photo.tag]}
+              </span>
+            </button>
+
+            {allowDelete && (
+              <button
+                type="button"
+                onClick={() => handleDelete(photo)}
+                disabled={deletingId === photo.id}
+                aria-label="Obriši fotografiju"
+                className="press-effect absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={2} />
+              </button>
             )}
-            <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
-              {PHOTO_TAG_LABELS_HR[photo.tag]}
-            </span>
-          </button>
+          </div>
         ))}
       </div>
 

@@ -137,10 +137,10 @@ export default function PhotoUploadDropzone({
               <button
                 type="button"
                 onClick={() => removePhoto(photo)}
-                className="press-effect absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                className="press-effect absolute left-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
                 aria-label="Ukloni fotografiju"
               >
-                <X className="h-3.5 w-3.5" strokeWidth={2} />
+                <X className="h-4 w-4" strokeWidth={2} />
               </button>
             </motion.div>
           ))}

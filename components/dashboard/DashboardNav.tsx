@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, Briefcase, Car, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { ALargeSmall, BarChart3, Briefcase, Car, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -14,13 +14,27 @@ const LINKS = [
   { href: '/dashboard/settings', label: 'Postavke', icon: Settings },
 ];
 
+// Scales the root <html> font-size, which every rem-based Tailwind size
+// (text, spacing, icons) is relative to — the same effect as a browser
+// zoom, but controlled in-app and persisted per mechanic.
+const FONT_SCALE_STEPS = [100, 112, 125, 137];
+
 export default function DashboardNav({ tenantName }: { tenantName: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
+  const [fontScaleIndex, setFontScaleIndex] = useState(0);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
+    try {
+      const stored = parseInt(localStorage.getItem('workshop-font-scale-index') ?? '0', 10);
+      if (!Number.isNaN(stored) && stored >= 0 && stored < FONT_SCALE_STEPS.length) {
+        setFontScaleIndex(stored);
+      }
+    } catch {
+      // Private browsing / storage blocked — falls back to 100%.
+    }
   }, []);
 
   function toggleTheme() {
@@ -31,6 +45,17 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
       localStorage.setItem('workshop-theme', next ? 'dark' : 'light');
     } catch {
       // Private browsing / storage blocked — theme just won't persist.
+    }
+  }
+
+  function cycleFontScale() {
+    const next = (fontScaleIndex + 1) % FONT_SCALE_STEPS.length;
+    setFontScaleIndex(next);
+    document.documentElement.style.fontSize = `${FONT_SCALE_STEPS[next]}%`;
+    try {
+      localStorage.setItem('workshop-font-scale-index', String(next));
+    } catch {
+      // Private browsing / storage blocked — size just won't persist.
     }
   }
 
@@ -46,7 +71,7 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2">
         <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{tenantName}</span>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 overflow-x-auto">
           {LINKS.map((link) => {
             const Icon = link.icon;
             const active = pathname?.startsWith(link.href);
@@ -66,6 +91,16 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
               </Link>
             );
           })}
+
+          <button
+            type="button"
+            onClick={cycleFontScale}
+            aria-label={`Veličina teksta: ${FONT_SCALE_STEPS[fontScaleIndex]}%. Dodirnite za promjenu.`}
+            className="press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
+          >
+            <ALargeSmall className="h-5 w-5" strokeWidth={2} />
+            <span className="hidden sm:inline">{FONT_SCALE_STEPS[fontScaleIndex]}%</span>
+          </button>
 
           <button
             type="button"

@@ -9,6 +9,7 @@ import type { PhotoTag } from '@/types/database';
 
 export interface LightboxPhoto {
   id: string;
+  path: string;
   url: string;
   tag: PhotoTag;
   caption: string | null;

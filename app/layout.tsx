@@ -16,13 +16,21 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-// Runs before hydration so the dashboard's workshop dark mode doesn't
-// flash light-then-dark on load. Reads a plain localStorage flag only —
-// no remote calls, nothing user-controlled gets injected into the DOM.
+// Runs before hydration so the dashboard's workshop dark mode / text size
+// don't flash back to defaults on load. Reads plain localStorage values
+// only — no remote calls, nothing user-controlled gets injected into the
+// DOM. Font scale is applied as a root font-size percentage, which scales
+// every rem-based Tailwind size (text, spacing, icons) proportionally —
+// the same effect as a browser zoom, but controlled in-app and persisted.
 const THEME_INIT_SCRIPT = `
   try {
     if (localStorage.getItem('workshop-theme') === 'dark') {
       document.documentElement.classList.add('dark');
+    }
+    var steps = [100, 112, 125, 137];
+    var idx = parseInt(localStorage.getItem('workshop-font-scale-index'), 10);
+    if (!isNaN(idx) && idx >= 0 && idx < steps.length && idx !== 0) {
+      document.documentElement.style.fontSize = steps[idx] + '%';
     }
   } catch (e) {}
 `;
