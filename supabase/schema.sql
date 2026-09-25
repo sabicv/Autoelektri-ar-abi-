@@ -461,3 +461,17 @@ comment on column public.clients.oib is 'Croatian OIB (11-digit tax id) — form
 alter table public.clients add column if not exists is_demo boolean not null default false;
 
 comment on column public.clients.is_demo is 'true for curated demo dataset rows (see lib/demo-seed.ts); real clients are always false.';
+
+-- ---------------------------------------------------------------------
+-- 12. Generic document attachments (job-vault, not just photos)
+-- ---------------------------------------------------------------------
+
+-- The job-vault storage bucket and job_photos table already handle any
+-- file type (storage doesn't check content-type), so a running business
+-- needs somewhere to put PDFs — scanned diagnostic reports, supplier
+-- invoices, warranty papers — without inventing a parallel table. This
+-- just adds one more tag value for "non-photo document"; the UI decides
+-- how to render a row (image vs. document tile) from the file extension.
+alter type public.photo_tag add value if not exists 'DOCUMENT';
+
+comment on type public.photo_tag is 'Tags job_photos rows — despite the name, DOCUMENT entries may be any file type (PDF, etc.), not just images.';

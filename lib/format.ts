@@ -26,6 +26,7 @@ export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {
   WIRING_DEFECT: 'Kvar na instalaciji',
   NEW_PARTS: 'Novi dijelovi',
   PARTS_INVOICE: 'Račun za dijelove',
+  DOCUMENT: 'Dokument',
 };
 
 interface VehicleLike {

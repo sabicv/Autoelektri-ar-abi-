@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
@@ -21,7 +21,13 @@ const SELECTABLE_TAGS: PhotoTag[] = [
   'PARTS_INVOICE',
   'INTAKE_CONDITION',
   'REGISTRATION_CARD',
+  'DOCUMENT',
 ];
+
+// These two are as likely to be a scanned/exported PDF (a diagnostic tool's
+// scan report, a supplier's invoice) as a photo — everything else stays
+// camera-first since it's always a photo of the vehicle/car itself.
+const DOCUMENT_LIKE_TAGS: PhotoTag[] = ['DOCUMENT', 'PARTS_INVOICE'];
 
 function sanitizeFileName(fileName: string) {
   return fileName.normalize('NFKD').replace(/[^\w.-]+/g, '_').toLowerCase();
@@ -31,6 +37,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
   const [tag, setTag] = useState<PhotoTag>('WIRING_DEFECT');
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isDocumentLike = DOCUMENT_LIKE_TAGS.includes(tag);
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
@@ -51,7 +58,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
       });
 
       if (uploadError) {
-        toast.error(`Prijenos fotografije "${file.name}" nije uspio.`);
+        toast.error(`Prijenos "${file.name}" nije uspio.`);
         continue;
       }
 
@@ -63,13 +70,13 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
       });
 
       if (insertError) {
-        toast.error('Fotografija je prenesena, ali nije zabilježena u arhivu.');
+        toast.error('Datoteka je prenesena, ali nije zabilježena u arhivu.');
         continue;
       }
     }
 
     setIsUploading(false);
-    toast.success('Fotografija dodana u arhiv.');
+    toast.success(isDocumentLike ? 'Dokument dodan u arhiv.' : 'Fotografija dodana u arhiv.');
     onUploaded?.();
   }
 
@@ -99,15 +106,23 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
         disabled={isUploading}
         className="press-effect flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-semibold text-slate-500 disabled:opacity-60 dark:border-workshop-border dark:text-slate-400"
       >
-        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" strokeWidth={2} />}
-        {isUploading ? 'Prijenos…' : `Dodaj fotografiju (${PHOTO_TAG_LABELS_HR[tag]})`}
+        {isUploading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : isDocumentLike ? (
+          <FileText className="h-4 w-4" strokeWidth={2} />
+        ) : (
+          <Camera className="h-4 w-4" strokeWidth={2} />
+        )}
+        {isUploading
+          ? 'Prijenos…'
+          : `${isDocumentLike ? 'Dodaj dokument' : 'Dodaj fotografiju'} (${PHOTO_TAG_LABELS_HR[tag]})`}
       </button>
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
-        capture="environment"
+        accept={isDocumentLike ? 'image/*,application/pdf' : 'image/*'}
+        capture={isDocumentLike ? undefined : 'environment'}
         multiple
         className="hidden"
         onChange={(event) => {

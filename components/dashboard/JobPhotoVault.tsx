@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ImageOff, Trash2 } from 'lucide-react';
+import { FileText, ImageOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
 import Skeleton from '@/components/ui/Skeleton';
 import PhotoLightbox, { type LightboxPhoto } from './PhotoLightbox';
+
+function isPdfPath(path: string) {
+  return path.toLowerCase().endsWith('.pdf');
+}
 
 interface JobPhotoVaultProps {
   jobId: string;
@@ -101,28 +105,47 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
     return (
       <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-300 py-8 text-slate-400 dark:border-workshop-border">
         <ImageOff className="h-6 w-6" strokeWidth={2} />
-        <p className="text-sm">Nema fotografija u arhivi.</p>
+        <p className="text-sm">Nema fotografija ni dokumenata u arhivi.</p>
       </div>
     );
   }
 
+  // The lightbox only knows how to render <img>, so it only ever sees the
+  // image subset — a PDF opens directly in a new tab instead. Indexes into
+  // this filtered list, not the full grid, so "next/prev" inside the
+  // lightbox never lands on a document and tries to render it as an image.
+  const imagePhotos = photos.filter((p) => !isPdfPath(p.path));
+
   return (
     <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {photos.map((photo, i) => (
+        {photos.map((photo) => {
+          const isDocument = isPdfPath(photo.path);
+
+          return (
           <div
             key={photo.id}
             className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
           >
             <button
               type="button"
-              onClick={() => setLightboxIndex(i)}
+              onClick={() =>
+                isDocument
+                  ? photo.url && window.open(photo.url, '_blank', 'noopener')
+                  : setLightboxIndex(imagePhotos.findIndex((p) => p.id === photo.id))
+              }
               className="press-effect block h-full w-full"
-              aria-label="Prikaži fotografiju"
+              aria-label={isDocument ? 'Otvori dokument' : 'Prikaži fotografiju'}
             >
-              {photo.url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo.url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} className="h-full w-full object-cover" />
+              {isDocument ? (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 p-2 text-slate-400 dark:text-slate-500">
+                  <FileText className="h-8 w-8" strokeWidth={1.5} />
+                </div>
+              ) : (
+                photo.url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo.url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} className="h-full w-full object-cover" />
+                )
               )}
               <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
                 {PHOTO_TAG_LABELS_HR[photo.tag]}
@@ -141,11 +164,12 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {lightboxIndex !== null && (
-        <PhotoLightbox photos={photos} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+        <PhotoLightbox photos={imagePhotos} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
     </>
   );

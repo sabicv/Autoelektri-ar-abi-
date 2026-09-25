@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Save, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { formatEuroHR } from '@/lib/format';
+import PartsSearchLinks from './PartsSearchLinks';
 
 interface CostEditorProps {
   jobId: string;
@@ -31,6 +32,7 @@ export default function CostEditor({
   const [laborInput, setLaborInput] = useState(initialLaborCost ? String(initialLaborCost) : '');
   const [partsInput, setPartsInput] = useState(initialPartsCost ? String(initialPartsCost) : '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showPartsSearch, setShowPartsSearch] = useState(false);
 
   const laborCost = parseEuro(laborInput);
   const partsCost = parseEuro(partsInput);
@@ -98,6 +100,23 @@ export default function CostEditor({
           />
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowPartsSearch((v) => !v)}
+        className="press-effect flex min-h-[40px] w-full items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 dark:border-workshop-border dark:text-slate-300"
+      >
+        <span className="flex items-center gap-1.5">
+          <Search className="h-4 w-4" strokeWidth={2} /> Traži cijenu dijela kod dobavljača
+        </span>
+        {showPartsSearch ? <ChevronUp className="h-4 w-4" strokeWidth={2} /> : <ChevronDown className="h-4 w-4" strokeWidth={2} />}
+      </button>
+
+      {showPartsSearch && (
+        <div className="rounded-xl border border-slate-200 p-3 dark:border-workshop-border">
+          <PartsSearchLinks />
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500 dark:text-slate-400">

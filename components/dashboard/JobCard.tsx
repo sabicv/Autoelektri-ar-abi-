@@ -6,6 +6,7 @@ import { Car, ChevronRight, Clock, Lock, Zap } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge, { type BadgeVariant } from '@/components/ui/Badge';
 import { daysSince, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Job, JobStatus } from '@/types/database';
 
 interface JobCardProps {
@@ -24,6 +25,20 @@ const STATUS_BADGE_VARIANT: Record<JobStatus, BadgeVariant> = {
   COLLECTED: 'collected',
 };
 
+// Left-edge color stripe so jobs are tellable apart at a glance while
+// scrolling the list, without having to read the status badge text.
+// Mirrors Badge's semantic colors; an emergency job always shows red,
+// overriding its status color, since urgency should win visually.
+const STATUS_BORDER_CLASS: Record<JobStatus, string> = {
+  PENDING_TRIAGE: 'border-l-slate-300 dark:border-l-slate-600',
+  IN_DIAGNOSTIC: 'border-l-sky-400 dark:border-l-electric-blue',
+  PARASITIC_DRAIN_TESTING: 'border-l-sky-400 dark:border-l-electric-blue',
+  AWAITING_MODULE_REMAP: 'border-l-sky-400 dark:border-l-electric-blue',
+  IN_REPAIR: 'border-l-amber-400',
+  FINISHED_AWAITING_PICKUP: 'border-l-emerald-400',
+  COLLECTED: 'border-l-emerald-400',
+};
+
 export default function JobCard({ job, clientName, vehicle }: JobCardProps) {
   const daysParked = job.finished_at ? daysSince(job.finished_at) : 0;
   const showParkedDuration = job.status === 'FINISHED_AWAITING_PICKUP' && daysParked > 0;
@@ -31,7 +46,13 @@ export default function JobCard({ job, clientName, vehicle }: JobCardProps) {
   return (
     <motion.div layout transition={{ type: 'spring', stiffness: 350, damping: 32 }}>
       <Link href={`/dashboard/jobs/${job.id}`}>
-        <Card hoverLift className="press-effect flex items-center gap-3 p-4">
+        <Card
+          hoverLift
+          className={cn(
+            'press-effect flex items-center gap-3 border-l-4 p-4',
+            job.is_emergency ? 'border-l-alarm-red' : STATUS_BORDER_CLASS[job.status]
+          )}
+        >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant={STATUS_BADGE_VARIANT[job.status]}>{JOB_STATUS_LABELS_HR[job.status]}</Badge>

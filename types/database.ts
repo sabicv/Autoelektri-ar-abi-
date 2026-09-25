@@ -30,7 +30,8 @@ export type PhotoTag =
   | 'DTC_DIAGNOSTIC_SCREEN'
   | 'WIRING_DEFECT'
   | 'NEW_PARTS'
-  | 'PARTS_INVOICE';
+  | 'PARTS_INVOICE'
+  | 'DOCUMENT';
 
 export const PHOTO_TAGS: readonly PhotoTag[] = [
   'INTAKE_CONDITION',
@@ -39,6 +40,7 @@ export const PHOTO_TAGS: readonly PhotoTag[] = [
   'WIRING_DEFECT',
   'NEW_PARTS',
   'PARTS_INVOICE',
+  'DOCUMENT',
 ];
 
 // ---------------------------------------------------------------------
