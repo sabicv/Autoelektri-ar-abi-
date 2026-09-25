@@ -46,3 +46,10 @@ export function daysSince(dateString: string | null): number {
   const diffMs = Date.now() - new Date(dateString).getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
+
+// Ground truth for "can this render as <img>?" — independent of tag choice,
+// since a DOCUMENT/PARTS_INVOICE-tagged file could still be a photo of a
+// paper receipt, not necessarily a PDF.
+export function isPdfPath(path: string): boolean {
+  return path.toLowerCase().endsWith('.pdf');
+}

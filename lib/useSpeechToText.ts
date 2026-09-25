@@ -44,6 +44,9 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   // separate from React state so onend (fired by the browser, not us) always
   // reads the latest value instead of a stale closure.
   const keepGoingRef = useRef(false);
+  // Guards against re-emitting a final result Android Chrome re-delivers
+  // verbatim after one of its own internal restarts (see continuous below).
+  const lastFinalTranscriptRef = useRef('');
 
   useEffect(() => {
     const w = window as unknown as {
@@ -59,26 +62,34 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
 
     const recognition = new Ctor();
     recognition.lang = 'hr-HR';
-    // continuous=true is unreliable on Android Chrome — it silently
-    // re-delivers already-finalized results after an internal restart,
-    // which sounded like dictation "repeating words". Instead we run one
-    // utterance at a time and auto-restart in onend below, which gets the
-    // same always-listening feel without that bug.
-    recognition.continuous = false;
+    // continuous=true, kept listening across pauses instead of ending and
+    // restarting recognition.start() per utterance (continuous=false) — that
+    // restart cycle triggers Android's "mic listening" earcon/haptic on every
+    // single pause during dictation, which felt like the phone endlessly
+    // buzzing. continuous=true avoids that, at the cost of Android Chrome
+    // occasionally re-delivering an already-finalized result verbatim after
+    // one of its own internal restarts (sounded like dictation "repeating
+    // words") — guarded below by skipping a final result identical to the
+    // immediately preceding one.
+    recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
       let interim = '';
-      let final = '';
+      const finalChunks: string[] = [];
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript;
+          const transcript = result[0].transcript;
+          if (transcript && transcript !== lastFinalTranscriptRef.current) {
+            finalChunks.push(transcript);
+            lastFinalTranscriptRef.current = transcript;
+          }
         } else {
           interim += result[0].transcript;
         }
       }
-      if (final) onFinalTextRef.current?.(final);
+      if (finalChunks.length > 0) onFinalTextRef.current?.(finalChunks.join(' '));
       setInterimText(interim);
     };
 
@@ -116,6 +127,7 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       recognitionRef.current.stop();
       setIsRecording(false);
     } else {
+      lastFinalTranscriptRef.current = '';
       keepGoingRef.current = true;
       recognitionRef.current.start();
       setIsRecording(true);

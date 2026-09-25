@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ALargeSmall, BarChart3, Briefcase, Car, LogOut, MoreVertical, Moon, Settings, Sun, Users } from 'lucide-react';
+import { ALargeSmall, Archive, BarChart3, Briefcase, LogOut, MoreVertical, Moon, Settings, Sun, Users } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import { cn } from '@/lib/utils';
@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 const LINKS = [
   { href: '/dashboard/jobs', label: 'Poslovi', icon: Briefcase },
   { href: '/dashboard/clients', label: 'Klijenti', icon: Users },
-  { href: '/dashboard/vehicles', label: 'Vozila', icon: Car },
-  { href: '/dashboard/analytics', label: 'Analitika', icon: BarChart3 },
+  { href: '/dashboard/vehicles', label: 'Vozila', icon: Archive },
+  { href: '/dashboard/analytics', label: 'Poslovanje', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Postavke', icon: Settings },
 ];
 

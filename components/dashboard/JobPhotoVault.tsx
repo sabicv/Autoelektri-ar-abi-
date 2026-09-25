@@ -4,13 +4,9 @@ import { useEffect, useState } from 'react';
 import { FileText, ImageOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
+import { PHOTO_TAG_LABELS_HR, isPdfPath } from '@/lib/format';
 import Skeleton from '@/components/ui/Skeleton';
 import PhotoLightbox, { type LightboxPhoto } from './PhotoLightbox';
-
-function isPdfPath(path: string) {
-  return path.toLowerCase().endsWith('.pdf');
-}
 
 interface JobPhotoVaultProps {
   jobId: string;
