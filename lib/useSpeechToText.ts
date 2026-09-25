@@ -40,6 +40,10 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const onFinalTextRef = useRef(onFinalText);
   onFinalTextRef.current = onFinalText;
+  // Whether the mic should keep listening after the current utterance ends —
+  // separate from React state so onend (fired by the browser, not us) always
+  // reads the latest value instead of a stale closure.
+  const keepGoingRef = useRef(false);
 
   useEffect(() => {
     const w = window as unknown as {
@@ -55,7 +59,12 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
 
     const recognition = new Ctor();
     recognition.lang = 'hr-HR';
-    recognition.continuous = true;
+    // continuous=true is unreliable on Android Chrome — it silently
+    // re-delivers already-finalized results after an internal restart,
+    // which sounded like dictation "repeating words". Instead we run one
+    // utterance at a time and auto-restart in onend below, which gets the
+    // same always-listening feel without that bug.
+    recognition.continuous = false;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
@@ -73,15 +82,29 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       setInterimText(interim);
     };
 
-    recognition.onerror = () => setIsRecording(false);
-    recognition.onend = () => {
+    recognition.onerror = () => {
+      keepGoingRef.current = false;
       setIsRecording(false);
+    };
+
+    recognition.onend = () => {
       setInterimText('');
+      if (keepGoingRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          keepGoingRef.current = false;
+          setIsRecording(false);
+        }
+      } else {
+        setIsRecording(false);
+      }
     };
 
     recognitionRef.current = recognition;
 
     return () => {
+      keepGoingRef.current = false;
       recognition.stop();
     };
   }, []);
@@ -89,9 +112,11 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   function toggleRecording() {
     if (!recognitionRef.current) return;
     if (isRecording) {
+      keepGoingRef.current = false;
       recognitionRef.current.stop();
       setIsRecording(false);
     } else {
+      keepGoingRef.current = true;
       recognitionRef.current.start();
       setIsRecording(true);
     }

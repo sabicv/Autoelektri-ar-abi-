@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ALargeSmall, BarChart3, Briefcase, Car, LogOut, Moon, Settings, Sun, Users } from 'lucide-react';
+import { ALargeSmall, BarChart3, Briefcase, Car, LogOut, MoreVertical, Moon, Settings, Sun, Users } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
@@ -25,6 +26,7 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
   const [fontScaleIndex, setFontScaleIndex] = useState(0);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -69,60 +71,82 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
 
   return (
     <header className="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
         <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{tenantName}</span>
 
-        <nav className="flex items-center gap-0.5 overflow-x-auto">
-          {LINKS.map((link) => {
-            const Icon = link.icon;
-            const active = pathname?.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  'press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-blue-50 text-blue-700 dark:bg-electric-blue/15 dark:text-electric-blue'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover'
-                )}
-              >
-                <Icon className="h-5 w-5" strokeWidth={2} />
-                <span className="hidden sm:inline">{link.label}</span>
-              </Link>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={cycleFontScale}
-            aria-label={`Veličina teksta: ${FONT_SCALE_STEPS[fontScaleIndex]}%. Dodirnite za promjenu.`}
-            className="press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
-          >
-            <ALargeSmall className="h-5 w-5" strokeWidth={2} />
-            <span className="hidden sm:inline">{FONT_SCALE_STEPS[fontScaleIndex]}%</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={isDark ? 'Uključi svijetli način rada' : 'Uključi tamni radionički način rada'}
-            className="press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
-          >
-            {isDark ? <Sun className="h-5 w-5" strokeWidth={2} /> : <Moon className="h-5 w-5" strokeWidth={2} />}
-            <span className="hidden sm:inline">{isDark ? 'Svijetlo' : 'Tamno'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="press-effect flex min-h-[52px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
-          >
-            <LogOut className="h-5 w-5" strokeWidth={2} />
-            <span className="hidden sm:inline">Odjava</span>
-          </button>
-        </nav>
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          aria-label="Više opcija"
+          className="press-effect flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-workshop-surface-hover"
+        >
+          <MoreVertical className="h-5 w-5" strokeWidth={2} />
+        </button>
       </div>
+
+      <nav className="grid grid-cols-5 border-t border-slate-100 dark:border-workshop-border">
+        {LINKS.map((link) => {
+          const Icon = link.icon;
+          const active = pathname?.startsWith(link.href);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                'press-effect flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center transition-colors',
+                active
+                  ? 'text-blue-700 dark:text-electric-blue'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-workshop-surface-hover'
+              )}
+            >
+              <Icon className="h-5 w-5" strokeWidth={2} />
+              <span className="w-full truncate text-[11px] font-medium leading-none">{link.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
+        <DrawerContent>
+          <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
+            Više opcija
+          </DrawerTitle>
+          <div className="space-y-1 p-4 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                cycleFontScale();
+              }}
+              className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+            >
+              <ALargeSmall className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+              Veličina teksta: {FONT_SCALE_STEPS[fontScaleIndex]}%
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                toggleTheme();
+              }}
+              className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+            >
+              {isDark ? <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={2} /> : <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={2} />}
+              {isDark ? 'Prebaci na svijetlo' : 'Prebaci na tamno'}
+            </button>
+
+            <div className="my-1 border-t border-slate-100 dark:border-workshop-border" />
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+              Odjava
+            </button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </header>
   );
 }

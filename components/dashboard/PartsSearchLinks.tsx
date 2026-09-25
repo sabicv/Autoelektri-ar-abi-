@@ -40,8 +40,8 @@ export default function PartsSearchLinks() {
       </div>
 
       <p className="text-xs text-slate-400 dark:text-slate-500">
-        Otvara pretragu izravno na stranici dobavljača u novoj kartici — nema službenog API-ja niti ponuda
-        unutar appa, ovo je samo brzi prečac.
+        Otvara pretragu kod dobavljača (ili Google pretragu za tu stranicu) u novoj kartici — nema službenog
+        API-ja niti ponuda unutar appa, ovo je samo brzi prečac.
       </p>
     </div>
   );
