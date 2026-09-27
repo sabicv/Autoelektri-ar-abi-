@@ -2,12 +2,13 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Loader2, Mic, MicOff, Send, Sparkles } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2, Mic, MicOff, Send, Sparkles, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import PhotoUploadDropzone, { type UploadedPhoto } from '@/components/triage/PhotoUploadDropzone';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { COUNTRY_CODES, SYMPTOM_OPTIONS, type SymptomCode } from '@/lib/validation/triage';
-import { newJobSchema } from '@/lib/validation/newJob';
+import { newClientSchema, newJobSchema } from '@/lib/validation/newJob';
 import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,8 @@ interface NewJobModalProps {
   onClose: () => void;
   tenantId: string;
   title?: string;
+  // 'client' registers a client + vehicle only, without opening a job.
+  mode?: 'job' | 'client';
 }
 
 interface ExtractedFields {
@@ -62,14 +65,18 @@ const initialValues: FormValues = {
   oib: '',
 };
 
-export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nalog' }: NewJobModalProps) {
+export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nalog', mode = 'job' }: NewJobModalProps) {
   const router = useRouter();
+  const isJobMode = mode === 'job';
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationPhotos, setRegistrationPhotos] = useState<UploadedPhoto[]>([]);
   const [intakePhotos, setIntakePhotos] = useState<UploadedPhoto[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showExtra, setShowExtra] = useState(false);
+  // Stays open once something is in it (e.g. VIN/year filled by the AI read).
+  const extraOpen = showExtra || Boolean(values.address || values.oib || values.year || values.vin);
 
   const handleFinalText = useCallback((final: string) => {
     setValues((prev) => ({
@@ -98,7 +105,94 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
     setErrors({});
     setRegistrationPhotos([]);
     setIntakePhotos([]);
+    setShowExtra(false);
     onClose();
+  }
+
+  function applyFieldErrors(issues: { path: (string | number)[]; message: string }[]) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of issues) {
+      const key = issue.path[0]?.toString();
+      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    setErrors(fieldErrors);
+  }
+
+  async function handleClientSubmit() {
+    const parsed = newClientSchema.safeParse({
+      firstName: values.firstName,
+      lastName: values.lastName,
+      countryCode: values.countryCode,
+      phoneNumber: values.phoneNumber,
+      registrationPlate: values.registrationPlate,
+      make: values.make || undefined,
+      model: values.model || undefined,
+      year: values.year ? Number(values.year) : undefined,
+      vin: values.vin || undefined,
+      address: values.address || undefined,
+      oib: values.oib || undefined,
+    });
+    if (!parsed.success) {
+      applyFieldErrors(parsed.error.issues);
+      return;
+    }
+
+    const d = parsed.data;
+    const phoneNumber = `${d.countryCode}${d.phoneNumber}`;
+    setErrors({});
+    setIsSubmitting(true);
+    const supabase = createBrowserSupabaseClient();
+
+    try {
+      // Phone is unique per workshop — reuse an existing client rather than
+      // failing, so this also works for "add a second car to this client".
+      const { data: existing } = await supabase.from('clients').select('id').eq('phone_number', phoneNumber).maybeSingle();
+
+      let clientId = existing?.id;
+      if (!clientId) {
+        const { data: created, error } = await supabase
+          .from('clients')
+          .insert({
+            tenant_id: tenantId,
+            first_name: d.firstName,
+            last_name: d.lastName,
+            phone_number: phoneNumber,
+            address: d.address || null,
+            oib: d.oib || null,
+          })
+          .select('id')
+          .single();
+        if (error || !created) {
+          toast.error('Spremanje klijenta nije uspjelo.');
+          return;
+        }
+        clientId = created.id;
+      }
+
+      const { error: vehicleError } = await supabase.from('vehicles').insert({
+        tenant_id: tenantId,
+        client_id: clientId,
+        registration_plate: d.registrationPlate,
+        make: d.make || null,
+        model: d.model || null,
+        year: d.year ?? null,
+        vin: d.vin || null,
+      });
+      if (vehicleError) {
+        toast.error(
+          vehicleError.code === '23505'
+            ? 'Vozilo s tom registracijom već postoji.'
+            : 'Klijent je spremljen, ali vozilo nije.'
+        );
+        return;
+      }
+
+      toast.success(existing ? 'Vozilo dodano postojećem klijentu.' : 'Klijent i vozilo spremljeni.');
+      resetAndClose();
+      router.refresh();
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function analyzeRegistrationCard(photo: UploadedPhoto) {
@@ -141,6 +235,10 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!isJobMode) {
+      await handleClientSubmit();
+      return;
+    }
 
     const payload = {
       firstName: values.firstName,
@@ -162,12 +260,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
 
     const parsed = newJobSchema.safeParse(payload);
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0]?.toString();
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
-      setErrors(fieldErrors);
+      applyFieldErrors(parsed.error.issues);
       return;
     }
 
@@ -208,6 +301,8 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
         </DrawerTitle>
 
         <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+          {isJobMode && (
+          <>
           <div className="rounded-xl border border-dashed border-blue-300 bg-blue-50/50 p-3 dark:border-electric-blue/30 dark:bg-electric-blue/5">
             <PhotoUploadDropzone
               tenantId={tenantId}
@@ -242,6 +337,8 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
               onChange={setIntakePhotos}
             />
           </div>
+          </>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Ime" error={errors.firstName}>
@@ -286,27 +383,6 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
             </div>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Adresa (za račun, opcionalno)" error={errors.address}>
-              <input
-                value={values.address}
-                onChange={(e) => update('address', e.target.value)}
-                className={inputClass(!!errors.address)}
-                placeholder="Ulica i broj, grad"
-              />
-            </Field>
-            <Field label="OIB (opcionalno)" error={errors.oib}>
-              <input
-                inputMode="numeric"
-                maxLength={11}
-                value={values.oib}
-                onChange={(e) => update('oib', e.target.value.replace(/[^0-9]/g, ''))}
-                className={inputClass(!!errors.oib)}
-                placeholder="11 znamenki"
-              />
-            </Field>
-          </div>
-
           <Field label="Registarska oznaka" error={errors.registrationPlate}>
             <input
               value={values.registrationPlate}
@@ -335,28 +411,64 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Godina" error={errors.year}>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={values.year}
-                onChange={(e) => update('year', e.target.value)}
-                className={inputClass(!!errors.year)}
-                placeholder="2015"
-              />
-            </Field>
-            <Field label="VIN" error={errors.vin}>
-              <input
-                maxLength={17}
-                value={values.vin}
-                onChange={(e) => update('vin', e.target.value.toUpperCase())}
-                className={inputClass(!!errors.vin)}
-                placeholder="opcionalno"
-              />
-            </Field>
-          </div>
+          {extraOpen ? (
+            <div className="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-workshop-surface-hover/50">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Dodatni podaci</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Godina" error={errors.year}>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={values.year}
+                    onChange={(e) => update('year', e.target.value)}
+                    className={inputClass(!!errors.year)}
+                    placeholder="2015"
+                  />
+                </Field>
+                <Field label="VIN" error={errors.vin}>
+                  <input
+                    maxLength={17}
+                    value={values.vin}
+                    onChange={(e) => update('vin', e.target.value.toUpperCase())}
+                    className={inputClass(!!errors.vin)}
+                    placeholder="17 znakova"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Adresa (za račun)" error={errors.address}>
+                  <input
+                    value={values.address}
+                    onChange={(e) => update('address', e.target.value)}
+                    className={inputClass(!!errors.address)}
+                    placeholder="Ulica i broj, grad"
+                  />
+                </Field>
+                <Field label="OIB" error={errors.oib}>
+                  <input
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={values.oib}
+                    onChange={(e) => update('oib', e.target.value.replace(/[^0-9]/g, ''))}
+                    className={inputClass(!!errors.oib)}
+                    placeholder="11 znamenki"
+                  />
+                </Field>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowExtra(true)}
+              className="press-effect flex min-h-[44px] w-full items-center justify-between rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 dark:border-workshop-border dark:text-slate-300"
+            >
+              Dodatni podaci (godina, VIN, adresa, OIB)
+              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+            </button>
+          )}
 
+          {isJobMode && (
+          <>
           <div>
             <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">Simptomi (opcionalno)</p>
             <div className="space-y-1.5">
@@ -441,14 +553,22 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
               />
             </span>
           </button>
+          </>
+          )}
 
           <button
             type="submit"
             disabled={isSubmitting}
             className="press-effect sticky bottom-0 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-base font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
           >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" strokeWidth={2} />}
-            {isSubmitting ? 'Kreiranje…' : 'Kreiraj nalog'}
+            {isSubmitting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isJobMode ? (
+              <Send className="h-5 w-5" strokeWidth={2} />
+            ) : (
+              <UserPlus className="h-5 w-5" strokeWidth={2} />
+            )}
+            {isSubmitting ? 'Spremanje…' : isJobMode ? 'Kreiraj nalog' : 'Spremi klijenta'}
           </button>
         </form>
       </DrawerContent>

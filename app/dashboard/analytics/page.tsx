@@ -1,8 +1,9 @@
-import { Car, Clock, Euro, PackageCheck, Wrench } from 'lucide-react';
+import { Car, Clock, Euro, Wrench } from 'lucide-react';
 import { requireOwner } from '@/lib/session';
-import { daysSince, formatEuroHR, vehicleLabel } from '@/lib/format';
+import { formatEuroHR } from '@/lib/format';
 import Card from '@/components/ui/Card';
-import type { Client, Job, Vehicle } from '@/types/database';
+import InvoicesOverview, { type InvoiceFilter } from '@/components/dashboard/InvoicesOverview';
+import type { Job } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +31,7 @@ function computeStats(jobs: Job[]) {
         ) / collectedJobs.length
       : null;
 
-  const occupiedSpots = jobs.filter((j) => j.status !== 'COLLECTED').length;
-
-  const awaitingPickup = jobs
-    .filter((j) => j.status === 'FINISHED_AWAITING_PICKUP' && j.finished_at)
-    .sort((a, b) => new Date(a.finished_at as string).getTime() - new Date(b.finished_at as string).getTime());
+  const vehiclesInWorkshop = jobs.filter((j) => j.status !== 'COLLECTED').length;
 
   return {
     jobsCompletedThisMonth,
@@ -44,107 +41,69 @@ function computeStats(jobs: Job[]) {
     totalDiagnosticHours,
     totalRepairHours,
     avgTurnaroundDays,
-    occupiedSpots,
-    awaitingPickup,
+    vehiclesInWorkshop,
   };
 }
 
-export default async function AnalyticsPage() {
+interface PageProps {
+  searchParams: Promise<{ pay?: string }>;
+}
+
+export default async function AnalyticsPage({ searchParams }: PageProps) {
   const { supabase } = await requireOwner();
+  const { pay } = await searchParams;
+  const filter: InvoiceFilter = pay === 'paid' || pay === 'all' ? pay : 'unpaid';
 
-  // RLS scopes every query below to this user's own tenant automatically —
-  // no manual tenant_id filtering needed.
-  const [{ data: jobs }, { data: clients }, { data: vehicles }] = await Promise.all([
-    supabase.from('jobs').select('*'),
-    supabase.from('clients').select('*'),
-    supabase.from('vehicles').select('*'),
-  ]);
-
-  const jobList = jobs ?? [];
-  const clientMap = new Map<string, Client>((clients ?? []).map((c) => [c.id, c]));
-  const vehicleMap = new Map<string, Vehicle>((vehicles ?? []).map((v) => [v.id, v]));
-
-  const stats = computeStats(jobList);
+  // RLS scopes this to the user's own tenant.
+  const { data: jobs } = await supabase.from('jobs').select('*');
+  const stats = computeStats(jobs ?? []);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Analitika poslovanja</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Poslovanje</h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          icon={Wrench}
-          label="Završeno ovaj mjesec"
-          value={String(stats.jobsCompletedThisMonth)}
-          accent="text-blue-600 dark:text-electric-blue"
-        />
-        <StatCard
-          icon={Clock}
-          label="Prosječno vrijeme obrade"
-          value={stats.avgTurnaroundDays !== null ? `${stats.avgTurnaroundDays.toFixed(1)} dana` : '—'}
-          accent="text-blue-600 dark:text-electric-blue"
-        />
-        <StatCard
-          icon={Car}
-          label="Zauzeta parkirna mjesta"
-          value={String(stats.occupiedSpots)}
-          accent="text-blue-600 dark:text-electric-blue"
-        />
-        <StatCard
-          icon={Euro}
-          label="Ukupan prihod"
-          value={formatEuroHR(stats.totalRevenue)}
-          accent="text-emerald-600 dark:text-emerald-400"
-        />
-      </div>
+      <InvoicesOverview supabase={supabase} filter={filter} />
 
-      <Card className="p-4">
-        <h2 className="mb-3 text-base font-bold text-slate-900 dark:text-slate-100">Prihod po kategoriji (ukupno)</h2>
-        <div className="space-y-2">
-          <RevenueRow label="Rad (dijagnostika i popravak)" amount={stats.totalLaborRevenue} total={stats.totalRevenue} />
-          <RevenueRow label="Dijelovi" amount={stats.totalPartsRevenue} total={stats.totalRevenue} />
+      <section className="space-y-3">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Pregled</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            icon={Wrench}
+            label="Završeno ovaj mjesec"
+            value={String(stats.jobsCompletedThisMonth)}
+            accent="text-blue-600 dark:text-electric-blue"
+          />
+          <StatCard
+            icon={Clock}
+            label="Prosječno vrijeme obrade"
+            value={stats.avgTurnaroundDays !== null ? `${stats.avgTurnaroundDays.toFixed(1)} dana` : '—'}
+            accent="text-blue-600 dark:text-electric-blue"
+          />
+          <StatCard
+            icon={Car}
+            label="Vozila u radionici"
+            value={String(stats.vehiclesInWorkshop)}
+            accent="text-blue-600 dark:text-electric-blue"
+          />
+          <StatCard
+            icon={Euro}
+            label="Ukupan prihod"
+            value={formatEuroHR(stats.totalRevenue)}
+            accent="text-emerald-600 dark:text-emerald-400"
+          />
         </div>
-        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-          Ukupno sati dijagnostike: {stats.totalDiagnosticHours.toFixed(1)}h · Ukupno sati popravka:{' '}
-          {stats.totalRepairHours.toFixed(1)}h. Rad se u sustavu ne bilježi zasebno po satu dijagnostike naspram
-          popravka u eurima, samo kao ukupan trošak rada po nalogu.
-        </p>
-      </Card>
 
-      <Card className="p-4">
-        <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-          <PackageCheck className="h-5 w-5 text-slate-400" strokeWidth={2} /> Vozila spremna za preuzimanje
-        </h2>
-
-        {stats.awaitingPickup.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Nema vozila koja čekaju preuzimanje.</p>
-        ) : (
-          <ul className="space-y-2">
-            {stats.awaitingPickup.map((job) => {
-              const client = clientMap.get(job.client_id);
-              const vehicle = vehicleMap.get(job.vehicle_id);
-              const days = daysSince(job.finished_at);
-              return (
-                <li
-                  key={job.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-workshop-border dark:bg-workshop-surface-hover"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {client ? `${client.first_name} ${client.last_name}` : 'Nepoznat klijent'}
-                    </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {vehicle ? vehicleLabel(vehicle) : 'Vozilo'}
-                    </p>
-                  </div>
-                  <span className="flex-shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
-                    {days} {days === 1 ? 'dan' : 'dana'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+        <Card className="p-4">
+          <h3 className="mb-3 text-sm font-bold text-slate-900 dark:text-slate-100">Prihod po vrsti (ukupno)</h3>
+          <div className="space-y-2">
+            <RevenueRow label="Rad" amount={stats.totalLaborRevenue} total={stats.totalRevenue} />
+            <RevenueRow label="Dijelovi" amount={stats.totalPartsRevenue} total={stats.totalRevenue} />
+          </div>
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            Sati dijagnostike: {stats.totalDiagnosticHours.toFixed(1)} h · sati popravka: {stats.totalRepairHours.toFixed(1)} h
+          </p>
+        </Card>
+      </section>
     </div>
   );
 }

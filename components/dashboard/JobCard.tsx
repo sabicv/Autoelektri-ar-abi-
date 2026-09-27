@@ -6,8 +6,12 @@ import { Car, ChevronRight, Clock, Lock, Zap } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge, { type BadgeVariant } from '@/components/ui/Badge';
 import { daysSince, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { jobTotal } from '@/lib/finance';
 import { cn } from '@/lib/utils';
 import type { Job, JobStatus } from '@/types/database';
+import { PaymentChip } from './JobBadges';
+
+const FINISHED_STATUSES: JobStatus[] = ['FINISHED_AWAITING_PICKUP', 'COLLECTED'];
 
 interface JobCardProps {
   job: Job;
@@ -65,6 +69,10 @@ export default function JobCard({ job, clientName, vehicle }: JobCardProps) {
                 <Badge variant="neutral">
                   <Lock className="h-3 w-3" strokeWidth={2.5} />
                 </Badge>
+              )}
+              {/* Mechanics get money fields zeroed server-side, so this only ever shows for owners. */}
+              {job.payment_status === 'UNPAID' && jobTotal(job) > 0 && FINISHED_STATUSES.includes(job.status) && (
+                <PaymentChip status="UNPAID" />
               )}
             </div>
             <p className="mt-2 flex items-center gap-1.5 truncate text-base font-bold text-slate-900 dark:text-slate-100">

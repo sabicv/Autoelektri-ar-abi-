@@ -118,6 +118,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
         onClose={() => setNewClientOpen(false)}
         tenantId={tenantId}
         title="Novi klijent i vozilo"
+        mode="client"
       />
     </div>
   );

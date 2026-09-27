@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 // Minimal shape of the Web Speech API we actually use — not part of
 // lib.dom.d.ts, and support varies (Chrome/Edge/Safari; no Firefox), so
@@ -17,6 +18,9 @@ interface SpeechRecognitionEventLike {
   resultIndex: number;
   results: ArrayLike<SpeechRecognitionResultLike>;
 }
+interface SpeechRecognitionErrorEventLike {
+  error: string;
+}
 interface SpeechRecognitionLike {
   lang: string;
   continuous: boolean;
@@ -24,7 +28,7 @@ interface SpeechRecognitionLike {
   start: () => void;
   stop: () => void;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
 }
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
@@ -32,6 +36,14 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 interface UseSpeechToTextOptions {
   onFinalText?: (text: string) => void;
 }
+
+const ERROR_MESSAGES_HR: Record<string, string> = {
+  'not-allowed': 'Mikrofon nije dozvoljen. Dodirnite ikonu lokota pored adrese stranice i dozvolite mikrofon.',
+  'service-not-allowed': 'Mikrofon nije dozvoljen. Dodirnite ikonu lokota pored adrese stranice i dozvolite mikrofon.',
+  'audio-capture': 'Mikrofon nije pronađen ili ga koristi druga aplikacija.',
+  network: 'Prepoznavanje govora treba internetsku vezu.',
+  'no-speech': 'Nisam čuo govor — dodirnite Diktiraj i pričajte odmah.',
+};
 
 export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   const [isSupported, setIsSupported] = useState(true);
@@ -41,11 +53,11 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   const onFinalTextRef = useRef(onFinalText);
   onFinalTextRef.current = onFinalText;
   // Whether the mic should keep listening after the current utterance ends —
-  // separate from React state so onend (fired by the browser, not us) always
-  // reads the latest value instead of a stale closure.
+  // a ref so onend (fired by the browser) always reads the latest value.
   const keepGoingRef = useRef(false);
-  // Guards against re-emitting a final result Android Chrome re-delivers
-  // verbatim after one of its own internal restarts (see continuous below).
+  const isMobileRef = useRef(false);
+  // Guards against re-emitting a final result Chrome re-delivers verbatim
+  // after one of its own internal restarts in continuous mode.
   const lastFinalTranscriptRef = useRef('');
 
   useEffect(() => {
@@ -60,18 +72,15 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       return;
     }
 
+    // Phone browsers play a system beep/vibration every time recognition
+    // starts and end it on every pause, so an auto-restart loop there made the
+    // phone buzz nonstop. On phones: one utterance per tap, no restart.
+    // Desktop Chrome handles continuous listening fine.
+    isMobileRef.current = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
     const recognition = new Ctor();
     recognition.lang = 'hr-HR';
-    // continuous=true, kept listening across pauses instead of ending and
-    // restarting recognition.start() per utterance (continuous=false) — that
-    // restart cycle triggers Android's "mic listening" earcon/haptic on every
-    // single pause during dictation, which felt like the phone endlessly
-    // buzzing. continuous=true avoids that, at the cost of Android Chrome
-    // occasionally re-delivering an already-finalized result verbatim after
-    // one of its own internal restarts (sounded like dictation "repeating
-    // words") — guarded below by skipping a final result identical to the
-    // immediately preceding one.
-    recognition.continuous = true;
+    recognition.continuous = !isMobileRef.current;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
@@ -93,23 +102,25 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       setInterimText(interim);
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
       keepGoingRef.current = false;
       setIsRecording(false);
+      const message = ERROR_MESSAGES_HR[event.error];
+      if (message) toast.error(message);
     };
 
     recognition.onend = () => {
       setInterimText('');
-      if (keepGoingRef.current) {
+      if (keepGoingRef.current && !isMobileRef.current) {
         try {
           recognition.start();
+          return;
         } catch {
           keepGoingRef.current = false;
-          setIsRecording(false);
         }
-      } else {
-        setIsRecording(false);
       }
+      keepGoingRef.current = false;
+      setIsRecording(false);
     };
 
     recognitionRef.current = recognition;
@@ -121,16 +132,24 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   }, []);
 
   function toggleRecording() {
-    if (!recognitionRef.current) return;
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
     if (isRecording) {
       keepGoingRef.current = false;
-      recognitionRef.current.stop();
+      recognition.stop();
       setIsRecording(false);
-    } else {
-      lastFinalTranscriptRef.current = '';
-      keepGoingRef.current = true;
-      recognitionRef.current.start();
+      return;
+    }
+
+    lastFinalTranscriptRef.current = '';
+    keepGoingRef.current = true;
+    try {
+      recognition.start();
       setIsRecording(true);
+    } catch {
+      // start() throws if the previous session hasn't fully ended yet.
+      keepGoingRef.current = false;
+      toast.error('Mikrofon se još gasi — pokušajte ponovno za sekundu.');
     }
   }
 

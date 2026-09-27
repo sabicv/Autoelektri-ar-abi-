@@ -59,3 +59,18 @@ export const newJobSchema = z.object({
 });
 
 export type NewJobValues = z.infer<typeof newJobSchema>;
+
+// Registering a client + vehicle ahead of any repair — no job is created.
+export const newClientSchema = newJobSchema.pick({
+  firstName: true,
+  lastName: true,
+  countryCode: true,
+  phoneNumber: true,
+  registrationPlate: true,
+  make: true,
+  model: true,
+  year: true,
+  vin: true,
+  address: true,
+  oib: true,
+});

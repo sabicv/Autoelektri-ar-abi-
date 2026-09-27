@@ -14,7 +14,6 @@ const LINKS = [
   { href: '/dashboard/clients', label: 'Klijenti', icon: Users, ownerOnly: false },
   { href: '/dashboard/archive', label: 'Arhiva', icon: Archive, ownerOnly: true },
   { href: '/dashboard/analytics', label: 'Poslovanje', icon: BarChart3, ownerOnly: true },
-  { href: '/dashboard/settings', label: 'Postavke', icon: Settings, ownerOnly: true },
 ];
 
 // Literal class names so Tailwind's scanner keeps them.
@@ -22,7 +21,6 @@ const GRID_COLS: Record<number, string> = {
   2: 'grid-cols-2',
   3: 'grid-cols-3',
   4: 'grid-cols-4',
-  5: 'grid-cols-5',
 };
 
 // Scales the root <html> font-size, which every rem-based Tailwind size
@@ -122,6 +120,20 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
             Više opcija
           </DrawerTitle>
           <div className="space-y-1 p-4 pt-3">
+            {role === 'owner' && (
+              <>
+                <Link
+                  href="/dashboard/settings"
+                  onClick={() => setMoreOpen(false)}
+                  className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+                >
+                  <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+                  Postavke radionice i djelatnici
+                </Link>
+                <div className="my-1 border-t border-slate-100 dark:border-workshop-border" />
+              </>
+            )}
+
             <button
               type="button"
               onClick={() => {

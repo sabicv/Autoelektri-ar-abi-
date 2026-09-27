@@ -6,23 +6,30 @@ import {
   ArrowLeft,
   Bell,
   Boxes,
+  Camera,
   Car,
   CheckCircle2,
+  ChevronRight,
+  Euro,
   History,
   KeyRound,
   Lock,
+  MoreHorizontal,
   Phone,
   Printer,
+  RefreshCw,
   Stethoscope,
   User,
   Wrench,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Badge, { type BadgeVariant } from '@/components/ui/Badge';
+import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import CollapsibleCard from '@/components/ui/CollapsibleCard';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
+import { JOB_STATUS_BADGE_VARIANT, PaymentChip } from './JobBadges';
 import ClientVehicleEditor from './ClientVehicleEditor';
 import CostEditor from './CostEditor';
 import PaymentStatusControl from './PaymentStatusControl';
@@ -35,8 +42,9 @@ import JobHistoryTimeline from './JobHistoryTimeline';
 import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
 import SmartLockboxModal from './SmartLockboxModal';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { daysSince, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
+import { SYMPTOM_OPTIONS } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
 import type { Client, Job, JobEvent, JobStatus, JobUpdate, StaffRole, Vehicle } from '@/types/database';
 
@@ -49,17 +57,9 @@ const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'COLLECTED',
 ];
 
-const STATUS_BADGE_VARIANT: Record<JobStatus, BadgeVariant> = {
-  PENDING_TRIAGE: 'neutral',
-  IN_DIAGNOSTIC: 'diagnostic',
-  PARASITIC_DRAIN_TESTING: 'diagnostic',
-  AWAITING_MODULE_REMAP: 'diagnostic',
-  IN_REPAIR: 'progress',
-  FINISHED_AWAITING_PICKUP: 'collected',
-  COLLECTED: 'collected',
-};
-
 const DIAGNOSTIC_PHASE_STATUSES: JobStatus[] = ['IN_DIAGNOSTIC', 'PARASITIC_DRAIN_TESTING', 'AWAITING_MODULE_REMAP'];
+
+const SYMPTOM_LABELS = new Map<string, string>(SYMPTOM_OPTIONS.map((o) => [o.code, o.label]));
 
 interface JobDetailViewProps {
   job: Job;
@@ -75,6 +75,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
   const [currentClient, setCurrentClient] = useState(client);
   const [currentVehicle, setCurrentVehicle] = useState(vehicle);
   const [statusDrawerOpen, setStatusDrawerOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
@@ -86,6 +87,10 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
   const daysParked = currentJob.finished_at ? daysSince(currentJob.finished_at) : 0;
   const showParkedDuration = currentJob.status === 'FINISHED_AWAITING_PICKUP' && daysParked > 0;
   const clientFirstName = currentClient.first_name;
+  const isFinished = currentJob.status === 'FINISHED_AWAITING_PICKUP';
+  const isDiagnosticPhase = DIAGNOSTIC_PHASE_STATUSES.includes(currentJob.status);
+
+  const symptomSummary = currentJob.symptoms.map((code) => SYMPTOM_LABELS.get(code) ?? code).join(', ');
 
   async function changeStatus(newStatus: JobStatus) {
     if (newStatus === currentJob.status) {
@@ -162,7 +167,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-10">
+    <div className="mx-auto max-w-2xl space-y-3 pb-10">
       <Link
         href="/dashboard/jobs"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -170,9 +175,9 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
         <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Natrag na poslove
       </Link>
 
-      <Card className="p-5">
+      <Card className="p-4">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={STATUS_BADGE_VARIANT[currentJob.status]}>{JOB_STATUS_LABELS_HR[currentJob.status]}</Badge>
+          <Badge variant={JOB_STATUS_BADGE_VARIANT[currentJob.status]}>{JOB_STATUS_LABELS_HR[currentJob.status]}</Badge>
           {currentJob.is_emergency && (
             <Badge variant="emergency">
               <Zap className="h-3 w-3" strokeWidth={2.5} /> HITNO
@@ -183,11 +188,17 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
               <Lock className="h-3 w-3" strokeWidth={2.5} /> Zaključano
             </Badge>
           )}
+          {isOwner && totalCost > 0 && <PaymentChip status={currentJob.payment_status} />}
         </div>
-        <p className="mt-2 flex items-center gap-1.5 text-lg font-bold text-slate-900 dark:text-slate-100">
+
+        <Link
+          href={`/dashboard/vehicles/${currentVehicle.id}`}
+          className="mt-2 flex items-center gap-1.5 text-lg font-bold text-slate-900 dark:text-slate-100"
+        >
           <Car className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={2} />
-          {vehicleLabel(currentVehicle)}
-        </p>
+          <span className="truncate">{vehicleLabel(currentVehicle)}</span>
+          <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
+        </Link>
         <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
           <User className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
           {currentClient.first_name} {currentClient.last_name}
@@ -198,83 +209,82 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
           </p>
         )}
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex gap-2">
           <a
             href={`tel:${currentClient.phone_number}`}
-            className="press-effect inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
+            className="press-effect inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
           >
             <Phone className="h-4 w-4" strokeWidth={2} /> Nazovi
           </a>
-          <Button variant="secondary" size="sm" onClick={() => setStatusDrawerOpen(true)}>
-            Promijeni status
+          <Button variant="secondary" size="sm" className="flex-1" onClick={() => setStatusDrawerOpen(true)}>
+            <RefreshCw className="h-4 w-4" strokeWidth={2} /> Status
           </Button>
-          <a
-            href={`/dashboard/jobs/${currentJob.id}/nalog`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="press-effect inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
-          >
-            <Printer className="h-4 w-4" strokeWidth={2} /> Radni nalog
-          </a>
-          {DIAGNOSTIC_PHASE_STATUSES.includes(currentJob.status) && (
-            <Button variant="outline" size="sm" onClick={() => setNotificationType('DIAGNOSTIC_COMPLETE')}>
-              <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova
-            </Button>
-          )}
-          {currentJob.status === 'FINISHED_AWAITING_PICKUP' && (
-            <>
-              {isOwner && (
-                <Button variant="primary" size="sm" onClick={() => setNotificationType('JOB_FINISHED')}>
-                  <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta
-                </Button>
-              )}
-              <Button variant="success" size="sm" onClick={() => setLockboxOpen(true)}>
-                <KeyRound className="h-4 w-4" strokeWidth={2} /> Pametni sef
-              </Button>
-            </>
-          )}
+          <Button variant="secondary" size="sm" className="px-3" aria-label="Više radnji" onClick={() => setMoreOpen(true)}>
+            <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+          </Button>
         </div>
-      </Card>
 
-      {!locked && (
-        <Card className="flex items-center justify-between gap-3 border-2 border-blue-200 bg-blue-50/50 p-4 dark:border-electric-blue/30 dark:bg-electric-blue/5">
-          <p className="text-sm text-slate-700 dark:text-slate-300">
-            Nalog je u statusu nacrta — sve se može mijenjati. Potvrdi kad su podaci konačni.
-          </p>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={isConfirming}
-            className="press-effect flex min-h-[44px] flex-shrink-0 items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-          >
-            <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> Potvrdi nalog
-          </button>
-        </Card>
-      )}
+        {isDiagnosticPhase && (
+          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => setNotificationType('DIAGNOSTIC_COMPLETE')}>
+            <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova — obavijesti klijenta
+          </Button>
+        )}
+        {isFinished && isOwner && (
+          <Button variant="primary" size="sm" className="mt-2 w-full" onClick={() => setNotificationType('JOB_FINISHED')}>
+            <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta da je gotovo
+          </Button>
+        )}
+      </Card>
 
       <Card className="p-4">
         <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-          <User className="h-4 w-4" strokeWidth={2} /> Klijent i vozilo
+          <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnostika
         </h2>
-        <ClientVehicleEditor
+        <DiagnosticWorkbench
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
-          client={currentClient}
-          vehicle={currentVehicle}
-          symptoms={currentJob.symptoms}
-          isEmergency={currentJob.is_emergency}
+          initialDiagnosticNotes={currentJob.diagnostic_notes}
           locked={locked}
-          onSaved={(data) => {
-            setCurrentClient(data.client);
-            setCurrentVehicle(data.vehicle);
-            setCurrentJob((prev) => ({ ...prev, symptoms: data.symptoms, is_emergency: data.isEmergency }));
-          }}
+          onSaved={(notes) => setCurrentJob((prev) => ({ ...prev, diagnostic_notes: notes }))}
         />
+      </Card>
+
+      <Card className="p-4">
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
+          <Wrench className="h-4 w-4" strokeWidth={2} /> Izvedeni radovi
+        </h2>
+        <VoiceWorkLogger
+          jobId={currentJob.id}
+          tenantId={currentJob.tenant_id}
+          initialWorkSummary={currentJob.work_summary}
+          locked={locked}
+          onSaved={(summary) => setCurrentJob((prev) => ({ ...prev, work_summary: summary }))}
+        />
+      </Card>
+
+      <CollapsibleCard title="Traži dio kod dobavljača" icon={<Boxes className="h-4 w-4" strokeWidth={2} />}>
+        <PartsSearchLinks />
+      </CollapsibleCard>
+
+      <Card className="p-4">
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
+          <Camera className="h-4 w-4" strokeWidth={2} /> Fotografije i dokumenti
+        </h2>
+        <div className="space-y-3">
+          <JobPhotoVault key={photoRefreshKey} jobId={currentJob.id} allowDelete={!locked} />
+          <JobPhotoUploader
+            jobId={currentJob.id}
+            tenantId={currentJob.tenant_id}
+            onUploaded={() => setPhotoRefreshKey((k) => k + 1)}
+          />
+        </div>
       </Card>
 
       {isOwner && (
         <Card className="space-y-3 p-4">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">Cijena i plaćanje</h2>
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
+            <Euro className="h-4 w-4" strokeWidth={2} /> Cijena i plaćanje
+          </h2>
           <CostEditor
             jobId={currentJob.id}
             tenantId={currentJob.tenant_id}
@@ -289,57 +299,49 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
         </Card>
       )}
 
-      <Card className="p-4">
-        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-          <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnostička radna ploča
-        </h2>
-        <DiagnosticWorkbench
+      <CollapsibleCard
+        title="Klijent i vozilo"
+        icon={<User className="h-4 w-4" strokeWidth={2} />}
+        summary={
+          <>
+            <p className="truncate">
+              {currentClient.first_name} {currentClient.last_name} · {currentClient.phone_number}
+            </p>
+            {symptomSummary && <p className="truncate text-xs">Simptomi: {symptomSummary}</p>}
+          </>
+        }
+      >
+        <ClientVehicleEditor
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
-          initialDiagnosticNotes={currentJob.diagnostic_notes}
+          client={currentClient}
+          vehicle={currentVehicle}
+          symptoms={currentJob.symptoms}
+          isEmergency={currentJob.is_emergency}
           locked={locked}
-          onSaved={(notes) => setCurrentJob((prev) => ({ ...prev, diagnostic_notes: notes }))}
+          onSaved={(data) => {
+            setCurrentClient(data.client);
+            setCurrentVehicle(data.vehicle);
+            setCurrentJob((prev) => ({ ...prev, symptoms: data.symptoms, is_emergency: data.isEmergency }));
+          }}
         />
-      </Card>
+      </CollapsibleCard>
 
-      <Card className="p-4">
-        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-          <Boxes className="h-4 w-4" strokeWidth={2} /> Traži dio kod dobavljača
-        </h2>
-        <PartsSearchLinks />
-      </Card>
-
-      <Card className="p-4">
-        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-          <Wrench className="h-4 w-4" strokeWidth={2} /> Izvedeni radovi i sažetak
-        </h2>
-        <VoiceWorkLogger
-          jobId={currentJob.id}
-          tenantId={currentJob.tenant_id}
-          initialWorkSummary={currentJob.work_summary}
-          locked={locked}
-          onSaved={(summary) => setCurrentJob((prev) => ({ ...prev, work_summary: summary }))}
-        />
-      </Card>
-
-      <Card className="p-4">
-        <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-200">Foto arhiv</h2>
-        <div className="space-y-3">
-          <JobPhotoVault key={photoRefreshKey} jobId={currentJob.id} allowDelete={!locked} />
-          <JobPhotoUploader
-            jobId={currentJob.id}
-            tenantId={currentJob.tenant_id}
-            onUploaded={() => setPhotoRefreshKey((k) => k + 1)}
-          />
+      {!locked && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-300 px-4 py-3 dark:border-workshop-border">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Nacrt — sve se još može mijenjati.</p>
+          <Button variant="secondary" size="sm" isLoading={isConfirming} onClick={handleConfirm}>
+            {!isConfirming && <CheckCircle2 className="h-4 w-4" strokeWidth={2} />} Potvrdi nalog
+          </Button>
         </div>
-      </Card>
+      )}
 
-      <Card className="p-4">
-        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-          <History className="h-4 w-4" strokeWidth={2} /> Povijest naloga
-        </h2>
+      <CollapsibleCard
+        title={`Povijest naloga (${events.length})`}
+        icon={<History className="h-4 w-4" strokeWidth={2} />}
+      >
         <JobHistoryTimeline events={events} />
-      </Card>
+      </CollapsibleCard>
 
       <Drawer open={statusDrawerOpen} onOpenChange={setStatusDrawerOpen}>
         <DrawerContent>
@@ -363,6 +365,43 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
                 {JOB_STATUS_LABELS_HR[status]}
               </button>
             ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
+        <DrawerContent>
+          <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">Više radnji</DrawerTitle>
+          <div className="space-y-1 p-4 pt-3">
+            <a
+              href={`/dashboard/jobs/${currentJob.id}/nalog`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+            >
+              <Printer className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+              {isOwner && totalCost > 0 ? `Radni nalog za ispis (${formatEuroHR(totalCost)})` : 'Radni nalog za ispis'}
+            </a>
+            <Link
+              href={`/dashboard/vehicles/${currentVehicle.id}`}
+              className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+            >
+              <Car className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+              Povijest vozila
+            </Link>
+            {isFinished && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setLockboxOpen(true);
+                }}
+                className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+              >
+                <KeyRound className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+                Pametni sef (preuzimanje ključeva)
+              </button>
+            )}
           </div>
         </DrawerContent>
       </Drawer>

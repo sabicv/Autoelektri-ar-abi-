@@ -3,24 +3,23 @@ import { Search, X } from 'lucide-react';
 import { requireOwner } from '@/lib/session';
 import { cn } from '@/lib/utils';
 import { PHOTO_TAGS, type PhotoTag } from '@/types/database';
-import { ArchiveInvoicesTab, ArchiveJobsTab, type InvoiceFilter } from '@/components/dashboard/archive/ArchiveJobsTab';
-import { ArchiveVehiclesTab } from '@/components/dashboard/archive/ArchiveVehiclesTab';
+import { ArchiveJobsTab } from '@/components/dashboard/archive/ArchiveJobsTab';
 import { ArchiveDocumentsTab } from '@/components/dashboard/archive/ArchiveDocumentsTab';
 import { ArchiveSearchResults } from '@/components/dashboard/archive/ArchiveSearchResults';
 
 export const dynamic = 'force-dynamic';
 
+// Vehicles live under Klijenti and money under Poslovanje, so the archive
+// is just history: search, past jobs and stored documents.
 const TABS = [
   { id: 'nalozi', label: 'Nalozi' },
-  { id: 'vozila', label: 'Vozila' },
   { id: 'dokumenti', label: 'Dokumenti' },
-  { id: 'racuni', label: 'Računi' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
 interface PageProps {
-  searchParams: Promise<{ tab?: string; q?: string; tag?: string; pay?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string; tag?: string }>;
 }
 
 export default async function ArchivePage({ searchParams }: PageProps) {
@@ -31,7 +30,6 @@ export default async function ArchivePage({ searchParams }: PageProps) {
   const query = params.q?.trim() ?? '';
   const isSearching = query.length >= 2;
   const tag = PHOTO_TAGS.includes(params.tag as PhotoTag) ? (params.tag as PhotoTag) : null;
-  const pay: InvoiceFilter = params.pay === 'paid' || params.pay === 'all' ? params.pay : 'unpaid';
 
   return (
     <div className="space-y-4">
@@ -65,7 +63,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
         <ArchiveSearchResults supabase={supabase} query={query} />
       ) : (
         <>
-          <nav className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
+          <nav className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
             {TABS.map((t) => (
               <Link
                 key={t.id}
@@ -83,9 +81,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
           </nav>
 
           {tab === 'nalozi' && <ArchiveJobsTab supabase={supabase} />}
-          {tab === 'vozila' && <ArchiveVehiclesTab supabase={supabase} />}
           {tab === 'dokumenti' && <ArchiveDocumentsTab supabase={supabase} tag={tag} />}
-          {tab === 'racuni' && <ArchiveInvoicesTab supabase={supabase} filter={pay} />}
         </>
       )}
     </div>

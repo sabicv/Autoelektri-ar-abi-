@@ -9,14 +9,13 @@ import { vehicleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Client, Job, Vehicle } from '@/types/database';
 
-type Filter = 'ACTIVE' | 'DIAGNOSTIC' | 'READY' | 'COLLECTED' | 'ALL';
+type Filter = 'ACTIVE' | 'DIAGNOSTIC' | 'READY' | 'COLLECTED';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'ACTIVE', label: 'Aktivno' },
-  { key: 'DIAGNOSTIC', label: 'U dijagnostici' },
+  { key: 'DIAGNOSTIC', label: 'Dijagnostika' },
   { key: 'READY', label: 'Spremno' },
   { key: 'COLLECTED', label: 'Preuzeto' },
-  { key: 'ALL', label: 'Sve' },
 ];
 
 const DIAGNOSTIC_STATUSES: Job['status'][] = ['IN_DIAGNOSTIC', 'PARASITIC_DRAIN_TESTING', 'AWAITING_MODULE_REMAP'];
@@ -55,10 +54,8 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
         case 'READY':
           return j.status === 'FINISHED_AWAITING_PICKUP';
         case 'COLLECTED':
-          return j.status === 'COLLECTED';
-        case 'ALL':
         default:
-          return true;
+          return j.status === 'COLLECTED';
       }
     });
 
