@@ -475,3 +475,49 @@ comment on column public.clients.is_demo is 'true for curated demo dataset rows 
 alter type public.photo_tag add value if not exists 'DOCUMENT';
 
 comment on type public.photo_tag is 'Tags job_photos rows — despite the name, DOCUMENT entries may be any file type (PDF, etc.), not just images.';
+
+-- ---------------------------------------------------------------------
+-- 13. Staff roles: owner vs. mechanic
+-- ---------------------------------------------------------------------
+
+-- Any hand-provisioned profile predating this constraint becomes an owner,
+-- which is what every existing account already effectively was.
+update public.profiles set role = 'owner' where role not in ('owner', 'mechanic');
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_role_check') then
+    alter table public.profiles add constraint profiles_role_check check (role in ('owner', 'mechanic'));
+  end if;
+end $$;
+
+comment on column public.profiles.role is 'owner = full access incl. finances, archive, settings, staff. mechanic = jobs and clients only.';
+
+create or replace function public.auth_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role from public.profiles where id = auth.uid()
+$$;
+
+-- Owners see their whole team; a mechanic still only sees their own row
+-- (profiles_select_own). Permissive policies OR together. There is
+-- deliberately no insert policy: creating a staff member also creates an
+-- auth.users row, which only the service-role client can do
+-- (app/api/staff/route.ts).
+drop policy if exists "profiles_owner_select_staff" on public.profiles;
+create policy "profiles_owner_select_staff" on public.profiles
+  for select
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and public.auth_role() = 'owner');
+
+-- Workshop settings (pricing, slug, branding) are owner-only.
+drop policy if exists "tenants_update_own" on public.tenants;
+create policy "tenants_update_own" on public.tenants
+  for update
+  to authenticated
+  using (id = public.auth_tenant_id() and public.auth_role() = 'owner')
+  with check (id = public.auth_tenant_id() and public.auth_role() = 'owner');

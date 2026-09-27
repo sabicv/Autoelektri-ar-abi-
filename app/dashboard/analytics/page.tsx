@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
 import { Car, Clock, Euro, PackageCheck, Wrench } from 'lucide-react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireOwner } from '@/lib/session';
 import { daysSince, formatEuroHR, vehicleLabel } from '@/lib/format';
 import Card from '@/components/ui/Card';
 import type { Client, Job, Vehicle } from '@/types/database';
@@ -51,12 +50,7 @@ function computeStats(jobs: Job[]) {
 }
 
 export default async function AnalyticsPage() {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const { supabase } = await requireOwner();
 
   // RLS scopes every query below to this user's own tenant automatically —
   // no manual tenant_id filtering needed.

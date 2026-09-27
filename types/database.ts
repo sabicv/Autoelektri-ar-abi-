@@ -43,6 +43,8 @@ export const PHOTO_TAGS: readonly PhotoTag[] = [
   'DOCUMENT',
 ];
 
+export type StaffRole = 'owner' | 'mechanic';
+
 // ---------------------------------------------------------------------
 // Supabase-generated-style Database interface
 // (Row = select shape, Insert = required/optional for insert,
@@ -89,14 +91,14 @@ export interface Database {
           id: string;
           tenant_id: string;
           full_name: string | null;
-          role: string;
+          role: StaffRole;
           created_at: string;
         };
         Insert: {
           id: string;
           tenant_id: string;
           full_name?: string | null;
-          role?: string;
+          role?: StaffRole;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
@@ -361,6 +363,10 @@ export interface Database {
       auth_tenant_id: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      auth_role: {
+        Args: Record<string, never>;
+        Returns: StaffRole;
       };
       submit_triage_intake: {
         Args: {

@@ -59,6 +59,8 @@ values (
 
 Sada se tim korisnikom možete prijaviti na `/login`.
 
+Ovako se kreira samo **vlasnik** radionice. Mehaničare vlasnik zatim dodaje sam u aplikaciji: **Postavke → Djelatnici → Dodaj mehaničara**. Mehaničari vide naloge i klijente, ali ne cijene, poslovanje, arhivu ni postavke.
+
 ## 4. Integracije (opcionalno, po potrebi)
 
 - **Vapi.ai (telefonija):** u Vapi dashboardu postavite Server URL asistenta na `https://vasa-domena.com/api/telephony/incoming-call`, kopirajte "Server URL Secret" u `VAPI_SERVER_SECRET`, a ID postojećeg asistenta u `VAPI_ASSISTANT_ID`. Broj telefona kupljen u Vapiju treba upisati u `tenants.vapi_phone_number_id` (njegov Vapi resource id) da bi sustav znao kojem tenantu poziv pripada.

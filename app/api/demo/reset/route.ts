@@ -32,6 +32,9 @@ export async function POST() {
   if (!profile) {
     return NextResponse.json({ error: 'Nalog nije povezan s radionicom.' }, { status: 403 });
   }
+  if (profile.role !== 'owner') {
+    return NextResponse.json({ error: 'Samo vlasnik radionice može resetirati demo podatke.' }, { status: 403 });
+  }
 
   const admin = createAdminClient();
   const tenantId = profile.tenant_id;

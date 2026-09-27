@@ -7,21 +7,31 @@ import { ALargeSmall, Archive, BarChart3, Briefcase, LogOut, MoreVertical, Moon,
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import { cn } from '@/lib/utils';
+import type { StaffRole } from '@/types/database';
 
 const LINKS = [
-  { href: '/dashboard/jobs', label: 'Poslovi', icon: Briefcase },
-  { href: '/dashboard/clients', label: 'Klijenti', icon: Users },
-  { href: '/dashboard/vehicles', label: 'Vozila', icon: Archive },
-  { href: '/dashboard/analytics', label: 'Poslovanje', icon: BarChart3 },
-  { href: '/dashboard/settings', label: 'Postavke', icon: Settings },
+  { href: '/dashboard/jobs', label: 'Poslovi', icon: Briefcase, ownerOnly: false },
+  { href: '/dashboard/clients', label: 'Klijenti', icon: Users, ownerOnly: false },
+  { href: '/dashboard/vehicles', label: 'Vozila', icon: Archive, ownerOnly: true },
+  { href: '/dashboard/analytics', label: 'Poslovanje', icon: BarChart3, ownerOnly: true },
+  { href: '/dashboard/settings', label: 'Postavke', icon: Settings, ownerOnly: true },
 ];
+
+// Literal class names so Tailwind's scanner keeps them.
+const GRID_COLS: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+};
 
 // Scales the root <html> font-size, which every rem-based Tailwind size
 // (text, spacing, icons) is relative to — the same effect as a browser
 // zoom, but controlled in-app and persisted per mechanic.
 const FONT_SCALE_STEPS = [100, 112, 125, 137];
 
-export default function DashboardNav({ tenantName }: { tenantName: string }) {
+export default function DashboardNav({ tenantName, role }: { tenantName: string; role: StaffRole }) {
+  const links = LINKS.filter((link) => role === 'owner' || !link.ownerOnly);
   const pathname = usePathname();
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
@@ -84,8 +94,8 @@ export default function DashboardNav({ tenantName }: { tenantName: string }) {
         </button>
       </div>
 
-      <nav className="grid grid-cols-5 border-t border-slate-100 dark:border-workshop-border">
-        {LINKS.map((link) => {
+      <nav className={cn('grid border-t border-slate-100 dark:border-workshop-border', GRID_COLS[links.length])}>
+        {links.map((link) => {
           const Icon = link.icon;
           const active = pathname?.startsWith(link.href);
           return (
