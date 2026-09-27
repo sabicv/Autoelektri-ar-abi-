@@ -101,7 +101,7 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
     return (
       <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-300 py-8 text-slate-400 dark:border-workshop-border">
         <ImageOff className="h-6 w-6" strokeWidth={2} />
-        <p className="text-sm">Nema fotografija ni dokumenata u arhivi.</p>
+        <p className="text-sm">Nema fotografija ni dokumenata.</p>
       </div>
     );
   }

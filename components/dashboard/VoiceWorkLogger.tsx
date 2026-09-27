@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Loader2, Mic, MicOff, Save } from 'lucide-react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
+import type { SectionHandle } from './sectionHandle';
 
 interface VoiceWorkLoggerProps {
   jobId: string;
@@ -15,15 +16,12 @@ interface VoiceWorkLoggerProps {
   onSaved?: (newSummary: string) => void;
 }
 
-export default function VoiceWorkLogger({
-  jobId,
-  tenantId,
-  initialWorkSummary,
-  locked = false,
-  onSaved,
-}: VoiceWorkLoggerProps) {
+const VoiceWorkLogger = forwardRef<SectionHandle, VoiceWorkLoggerProps>(function VoiceWorkLogger(
+  { jobId, tenantId, initialWorkSummary, locked = false, onSaved },
+  ref
+) {
   const [summary, setSummary] = useState(initialWorkSummary ?? '');
-  const [isSaving, setIsSaving] = useState(false);
+  const savedRef = useRef(initialWorkSummary ?? '');
 
   const handleFinalText = useCallback((final: string) => {
     setSummary((prev) => (prev ? `${prev} ${final}`.trim() : final.trim()));
@@ -33,30 +31,31 @@ export default function VoiceWorkLogger({
     onFinalText: handleFinalText,
   });
 
-  async function handleSave() {
-    setIsSaving(true);
-    const supabase = createBrowserSupabaseClient();
-    const { error } = await supabase.from('jobs').update({ work_summary: summary }).eq('id', jobId);
+  useImperativeHandle(ref, () => ({
+    isDirty: () => summary !== savedRef.current,
+    save: async () => {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.from('jobs').update({ work_summary: summary }).eq('id', jobId);
 
-    if (error) {
-      setIsSaving(false);
-      toast.error('Spremanje zapisa rada nije uspjelo.');
-      return;
-    }
+      if (error) {
+        toast.error('Spremanje izvedenih radova nije uspjelo.');
+        return false;
+      }
 
-    await supabase.from('job_events').insert({
-      tenant_id: tenantId,
-      job_id: jobId,
-      event_type: 'WORK_LOG_UPDATED',
-      actor: 'mechanic',
-      message: 'Zapis o izvedenim radovima ažuriran.',
-      metadata: {},
-    });
+      await supabase.from('job_events').insert({
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_type: 'WORK_LOG_UPDATED',
+        actor: 'mechanic',
+        message: 'Zapis o izvedenim radovima ažuriran.',
+        metadata: {},
+      });
 
-    setIsSaving(false);
-    toast.success('Zapis rada spremljen.');
-    onSaved?.(summary);
-  }
+      savedRef.current = summary;
+      onSaved?.(summary);
+      return true;
+    },
+  }));
 
   return (
     <fieldset disabled={locked} className="space-y-2">
@@ -81,9 +80,6 @@ export default function VoiceWorkLogger({
         )}
       </div>
 
-      {!isSupported && (
-        <p className="text-xs text-slate-400 dark:text-slate-500">Glasovni unos nije podržan u ovom pregledniku.</p>
-      )}
       {interimText && <p className="truncate text-xs italic text-slate-400">{interimText}</p>}
 
       <textarea
@@ -91,21 +87,10 @@ export default function VoiceWorkLogger({
         rows={4}
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
-        placeholder="Opis izvedenih radova…"
         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
       />
-
-      {!locked && (
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="press-effect flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2} />}
-          {isSaving ? 'Spremanje…' : 'Spremi zapis rada'}
-        </button>
-      )}
     </fieldset>
   );
-}
+});
+
+export default VoiceWorkLogger;

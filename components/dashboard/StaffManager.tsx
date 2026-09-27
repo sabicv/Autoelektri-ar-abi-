@@ -93,12 +93,7 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
 
   return (
     <section className="max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-workshop-border dark:bg-workshop-surface">
-      <div>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Djelatnici</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Mehaničari vide naloge i klijente, ali ne i cijene, arhivu, poslovanje ni postavke.
-        </p>
-      </div>
+      <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Djelatnici</h2>
 
       <ul className="divide-y divide-slate-100 dark:divide-workshop-border">
         {staff.map((member) => (
@@ -164,9 +159,6 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
               className={inputClass(!!errors.password)}
               placeholder="barem 8 znakova"
             />
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              Mehaničar je kasnije može promijeniti preko &quot;Zaboravljena lozinka&quot;.
-            </p>
           </Field>
           <div className="flex gap-2">
             <button

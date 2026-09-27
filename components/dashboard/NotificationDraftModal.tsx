@@ -190,7 +190,7 @@ export default function NotificationDraftModal({
                   value={defectDescription}
                   onChange={(e) => setDefectDescription(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
-                  placeholder="Npr. pronađen prekid na instalaciji alternatora"
+                  placeholder=""
                 />
               </div>
 
@@ -213,7 +213,6 @@ export default function NotificationDraftModal({
                 tenantId={tenantId}
                 tag="WIRING_DEFECT"
                 label="Fotografija kvara"
-                hint="Obavezno — šalje se kao dokaz uz zahtjev."
                 maxFiles={1}
                 photos={photos}
                 onChange={setPhotos}
@@ -243,7 +242,7 @@ export default function NotificationDraftModal({
                   value={faultSummary}
                   onChange={(e) => setFaultSummary(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
-                  placeholder="Npr. prekid na instalaciji alternatora"
+                  placeholder=""
                 />
               </div>
 

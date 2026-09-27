@@ -179,7 +179,6 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
           label="Skraćena poveznica (slug)"
           htmlFor="slug"
           error={errors.slug}
-          hint="Koristi se u javnom linku za prijavu kvara: app.com/t/[slug]"
         >
           <input
             id="slug"
@@ -240,7 +239,6 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
           label="Hitni doplatak (%)"
           htmlFor="emergencySurchargePercent"
           error={errors.emergencySurchargePercent}
-          hint="Primjenjuje se na nove naloge kada klijent odabere hitni prijem."
         >
           <input
             id="emergencySurchargePercent"

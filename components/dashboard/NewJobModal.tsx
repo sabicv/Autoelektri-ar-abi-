@@ -307,8 +307,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
             <PhotoUploadDropzone
               tenantId={tenantId}
               tag="REGISTRATION_CARD"
-              label="Slikaj prometnu (AI popuni podatke)"
-              hint="Fotografirajte prometnu dozvolu — ime, marka, model, VIN i registracija će se pokušati automatski pročitati."
+              label="Prometna dozvola"
               maxFiles={1}
               photos={registrationPhotos}
               onChange={(next) => {
@@ -330,8 +329,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
             <PhotoUploadDropzone
               tenantId={tenantId}
               tag="INTAKE_CONDITION"
-              label="Slikaj vozilo (opcionalno)"
-              hint="Stanje vozila pri prijemu — do 4 fotografije."
+              label="Stanje vozila"
               maxFiles={4}
               photos={intakePhotos}
               onChange={setIntakePhotos}
@@ -462,7 +460,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
               onClick={() => setShowExtra(true)}
               className="press-effect flex min-h-[44px] w-full items-center justify-between rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 dark:border-workshop-border dark:text-slate-300"
             >
-              Dodatni podaci (godina, VIN, adresa, OIB)
+              Dodatni podaci
               <ChevronDown className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
@@ -470,7 +468,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
           {isJobMode && (
           <>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">Simptomi (opcionalno)</p>
+            <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">Simptomi</p>
             <div className="space-y-1.5">
               {SYMPTOM_OPTIONS.map((option) => {
                 const checked = values.symptoms.includes(option.code);
@@ -500,7 +498,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label htmlFor="newJobDescription" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Opis kvara (opcionalno)
+                Opis kvara
               </label>
               {speechSupported && (
                 <button
@@ -524,7 +522,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
               value={values.description}
               onChange={(e) => update('description', e.target.value)}
               className={inputClass(!!errors.description)}
-              placeholder="Opišite kvar ili diktirajte mikrofonom..."
+              placeholder=""
             />
           </div>
 

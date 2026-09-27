@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   Boxes,
   Camera,
   Car,
-  CheckCircle2,
   ChevronRight,
   Euro,
   History,
@@ -18,6 +17,7 @@ import {
   Phone,
   Printer,
   RefreshCw,
+  Save,
   Stethoscope,
   User,
   Wrench,
@@ -41,6 +41,7 @@ import JobPhotoUploader from './JobPhotoUploader';
 import JobHistoryTimeline from './JobHistoryTimeline';
 import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
 import SmartLockboxModal from './SmartLockboxModal';
+import type { SectionHandle } from './sectionHandle';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
@@ -81,6 +82,11 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
   const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const diagnosticRef = useRef<SectionHandle>(null);
+  const workRef = useRef<SectionHandle>(null);
+  const costRef = useRef<SectionHandle>(null);
+  const detailsRef = useRef<SectionHandle>(null);
 
   const locked = currentJob.confirmed_at !== null;
   const totalCost = jobTotal(currentJob);
@@ -132,12 +138,38 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
     toast.success(`Status: ${JOB_STATUS_LABELS_HR[newStatus]}`);
   }
 
+  // Saves only the sections that actually changed. null = nothing to save.
+  async function saveChangedSections(): Promise<boolean | null> {
+    const dirty = [diagnosticRef, workRef, costRef, detailsRef]
+      .map((r) => r.current)
+      .filter((s): s is SectionHandle => s !== null && s.isDirty());
+    if (dirty.length === 0) return null;
+
+    for (const section of dirty) {
+      if (!(await section.save())) return false;
+    }
+    return true;
+  }
+
+  async function handleSave() {
+    setIsSaving(true);
+    const result = await saveChangedSections();
+    setIsSaving(false);
+    if (result === null) toast('Nema promjena za spremanje.');
+    else if (result) toast.success('Promjene spremljene.');
+  }
+
   async function handleConfirm() {
-    if (!window.confirm('Potvrditi i zaključati nalog? Podaci (klijent, vozilo, dijagnoza, cijena) se nakon toga više neće moći mijenjati.')) {
+    if (!window.confirm('Zaključati nalog? Nakon toga se podaci više ne mogu mijenjati.')) {
       return;
     }
 
     setIsConfirming(true);
+    if ((await saveChangedSections()) === false) {
+      setIsConfirming(false);
+      return;
+    }
+
     const supabase = createBrowserSupabaseClient();
     const { data, error } = await supabase
       .from('jobs')
@@ -163,7 +195,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
     });
 
     setCurrentJob(redactJobForRole(data, viewerRole));
-    toast.success('Nalog je potvrđen i zaključan.');
+    toast.success('Nalog je zaključan.');
   }
 
   return (
@@ -203,6 +235,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
           <User className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
           {currentClient.first_name} {currentClient.last_name}
         </p>
+        {symptomSummary && <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{symptomSummary}</p>}
         {showParkedDuration && (
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             Vozilo parkirano {daysParked} {daysParked === 1 ? 'dan' : 'dana'}
@@ -241,6 +274,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
           <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnostika
         </h2>
         <DiagnosticWorkbench
+          ref={diagnosticRef}
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
           initialDiagnosticNotes={currentJob.diagnostic_notes}
@@ -254,6 +288,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
           <Wrench className="h-4 w-4" strokeWidth={2} /> Izvedeni radovi
         </h2>
         <VoiceWorkLogger
+          ref={workRef}
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
           initialWorkSummary={currentJob.work_summary}
@@ -286,6 +321,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
             <Euro className="h-4 w-4" strokeWidth={2} /> Cijena i plaćanje
           </h2>
           <CostEditor
+            ref={costRef}
             jobId={currentJob.id}
             tenantId={currentJob.tenant_id}
             initialLaborCost={currentJob.total_labor_cost}
@@ -299,19 +335,9 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
         </Card>
       )}
 
-      <CollapsibleCard
-        title="Klijent i vozilo"
-        icon={<User className="h-4 w-4" strokeWidth={2} />}
-        summary={
-          <>
-            <p className="truncate">
-              {currentClient.first_name} {currentClient.last_name} · {currentClient.phone_number}
-            </p>
-            {symptomSummary && <p className="truncate text-xs">Simptomi: {symptomSummary}</p>}
-          </>
-        }
-      >
+      <CollapsibleCard title="Uredi klijenta i vozilo" icon={<User className="h-4 w-4" strokeWidth={2} />}>
         <ClientVehicleEditor
+          ref={detailsRef}
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
           client={currentClient}
@@ -327,21 +353,23 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
         />
       </CollapsibleCard>
 
-      {!locked && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-300 px-4 py-3 dark:border-workshop-border">
-          <p className="text-xs text-slate-500 dark:text-slate-400">Nacrt — sve se još može mijenjati.</p>
-          <Button variant="secondary" size="sm" isLoading={isConfirming} onClick={handleConfirm}>
-            {!isConfirming && <CheckCircle2 className="h-4 w-4" strokeWidth={2} />} Potvrdi nalog
-          </Button>
-        </div>
-      )}
-
       <CollapsibleCard
         title={`Povijest naloga (${events.length})`}
         icon={<History className="h-4 w-4" strokeWidth={2} />}
       >
         <JobHistoryTimeline events={events} />
       </CollapsibleCard>
+
+      {!locked && (
+        <div className="sticky bottom-0 z-20 -mx-4 flex gap-2 border-t border-slate-200 bg-slate-50/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
+          <Button variant="primary" className="flex-1" isLoading={isSaving} disabled={isConfirming} onClick={handleSave}>
+            {!isSaving && <Save className="h-5 w-5" strokeWidth={2} />} Spremi promjene
+          </Button>
+          <Button variant="secondary" className="flex-1" isLoading={isConfirming} disabled={isSaving} onClick={handleConfirm}>
+            {!isConfirming && <Lock className="h-5 w-5" strokeWidth={2} />} Zaključaj nalog
+          </Button>
+        </div>
+      )}
 
       <Drawer open={statusDrawerOpen} onOpenChange={setStatusDrawerOpen}>
         <DrawerContent>

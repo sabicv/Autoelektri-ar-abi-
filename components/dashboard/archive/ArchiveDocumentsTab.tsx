@@ -50,40 +50,33 @@ export async function ArchiveDocumentsTab({
       </div>
 
       {list.length === 0 ? (
-        <EmptyState>Nema spremljenih fotografija ni dokumenata{tag ? ' u ovoj kategoriji' : ''}.</EmptyState>
+        <EmptyState>Nema dokumenata.</EmptyState>
       ) : (
-        <>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {list.map((photo) => {
-              const url = urlByPath.get(photo.photo_url);
-              const isPdf = isPdfPath(photo.photo_url);
-              return (
-                <Link
-                  key={photo.id}
-                  href={`/dashboard/jobs/${photo.job_id}`}
-                  className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
-                >
-                  {isPdf || !url ? (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
-                      <FileText className="h-8 w-8" strokeWidth={1.5} />
-                    </div>
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} loading="lazy" className="h-full w-full object-cover" />
-                  )}
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
-                    {new Date(photo.created_at).toLocaleDateString('hr-HR')} · {PHOTO_TAG_LABELS_HR[photo.tag]}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-          {(tag ? counts.get(tag) ?? 0 : total) > PAGE_SIZE && (
-            <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-              Prikazano zadnjih {PAGE_SIZE}. Starije pronađite preko pretrage ili putovnice vozila.
-            </p>
-          )}
-        </>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {list.map((photo) => {
+            const url = urlByPath.get(photo.photo_url);
+            const isPdf = isPdfPath(photo.photo_url);
+            return (
+              <Link
+                key={photo.id}
+                href={`/dashboard/jobs/${photo.job_id}`}
+                className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
+              >
+                {isPdf || !url ? (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
+                    <FileText className="h-8 w-8" strokeWidth={1.5} />
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} loading="lazy" className="h-full w-full object-cover" />
+                )}
+                <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
+                  {new Date(photo.created_at).toLocaleDateString('hr-HR')} · {PHOTO_TAG_LABELS_HR[photo.tag]}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       )}
     </div>
   );

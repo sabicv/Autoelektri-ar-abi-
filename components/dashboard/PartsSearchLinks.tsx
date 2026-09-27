@@ -14,7 +14,7 @@ export default function PartsSearchLinks() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Broj dijela ili naziv (npr. alternator Golf 7)..."
+          placeholder="Broj ili naziv dijela"
           className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
@@ -38,11 +38,6 @@ export default function PartsSearchLinks() {
           </a>
         ))}
       </div>
-
-      <p className="text-xs text-slate-400 dark:text-slate-500">
-        Otvara pretragu kod dobavljača (ili Google pretragu za tu stranicu) u novoj kartici — nema službenog
-        API-ja niti ponuda unutar appa, ovo je samo brzi prečac.
-      </p>
     </div>
   );
 }

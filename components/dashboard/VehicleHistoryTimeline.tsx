@@ -46,7 +46,7 @@ export default function VehicleHistoryTimeline({ jobs, reportsByJobId, showCosts
         <input
           value={dtcQuery}
           onChange={(e) => setDtcQuery(e.target.value)}
-          placeholder="Pretraži povijest po DTC kodu (npr. P0300)..."
+          placeholder="Traži DTC kod"
           className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
         />
       </div>

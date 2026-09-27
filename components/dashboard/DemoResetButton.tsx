@@ -34,11 +34,7 @@ export default function DemoResetButton() {
       <summary className="cursor-pointer list-none text-sm font-semibold text-slate-500 dark:text-slate-400">
         Demo podaci (za prezentacije) <span className="text-slate-300 group-open:hidden">▸</span>
       </summary>
-      <div className="mt-3 space-y-3">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Vraća uredan, realističan set primjera klijenata i naloga za prikaz softvera — korisno prije demonstracije
-          novom klijentu. Ne dira stvarne klijente i naloge.
-        </p>
+      <div className="mt-3">
         <button
           type="button"
           onClick={handleReset}

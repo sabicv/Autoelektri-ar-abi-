@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BatteryWarning, Loader2, Mic, MicOff, Plus, Save, Search, X } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { BatteryWarning, Mic, MicOff, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { searchDtcCodes } from '@/lib/dtc-codes';
 import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
 import Skeleton from '@/components/ui/Skeleton';
+import type { SectionHandle } from './sectionHandle';
 
 interface DiagnosticWorkbenchProps {
   jobId: string;
@@ -17,13 +18,10 @@ interface DiagnosticWorkbenchProps {
   onSaved?: (diagnosticNotes: string) => void;
 }
 
-export default function DiagnosticWorkbench({
-  jobId,
-  tenantId,
-  initialDiagnosticNotes,
-  locked = false,
-  onSaved,
-}: DiagnosticWorkbenchProps) {
+const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(function DiagnosticWorkbench(
+  { jobId, tenantId, initialDiagnosticNotes, locked = false, onSaved },
+  ref
+) {
   const [isLoading, setIsLoading] = useState(true);
   const [dtcCodes, setDtcCodes] = useState<string[]>([]);
   const [dtcInput, setDtcInput] = useState('');
@@ -31,8 +29,10 @@ export default function DiagnosticWorkbench({
   const [batteryDrainMa, setBatteryDrainMa] = useState('');
   const [moduleNotes, setModuleNotes] = useState('');
   const [diagnosticNotes, setDiagnosticNotes] = useState(initialDiagnosticNotes ?? '');
-  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const savedRef = useRef('');
+  const snapshot = (codes: string[], drain: string, modules: string, notes: string) =>
+    JSON.stringify([codes, drain, modules, notes]);
 
   const suggestions = useMemo(
     () => searchDtcCodes(dtcInput).filter((s) => !dtcCodes.includes(s.code)),
@@ -64,11 +64,13 @@ export default function DiagnosticWorkbench({
         .maybeSingle();
 
       if (cancelled) return;
-      if (data) {
-        setDtcCodes(data.dtc_codes ?? []);
-        setBatteryDrainMa(data.battery_drain_ma !== null ? String(data.battery_drain_ma) : '');
-        setModuleNotes(data.module_notes ?? '');
-      }
+      const codes = data?.dtc_codes ?? [];
+      const drain = data?.battery_drain_ma != null ? String(data.battery_drain_ma) : '';
+      const modules = data?.module_notes ?? '';
+      setDtcCodes(codes);
+      setBatteryDrainMa(drain);
+      setModuleNotes(modules);
+      savedRef.current = snapshot(codes, drain, modules, initialDiagnosticNotes ?? '');
       setIsLoading(false);
     }
 
@@ -76,6 +78,8 @@ export default function DiagnosticWorkbench({
     return () => {
       cancelled = true;
     };
+    // initialDiagnosticNotes only seeds the snapshot on first load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   function addCode(rawCode: string) {
@@ -102,49 +106,48 @@ export default function DiagnosticWorkbench({
     }
   }
 
-  async function handleSave() {
-    setIsSaving(true);
-    const supabase = createBrowserSupabaseClient();
+  useImperativeHandle(ref, () => ({
+    isDirty: () => !isLoading && snapshot(dtcCodes, batteryDrainMa, moduleNotes, diagnosticNotes) !== savedRef.current,
+    save: async () => {
+      const supabase = createBrowserSupabaseClient();
+      const parsedDrain = batteryDrainMa.trim() ? Number(batteryDrainMa.replace(',', '.')) : null;
 
-    const parsedDrain = batteryDrainMa.trim() ? Number(batteryDrainMa.replace(',', '.')) : null;
+      const { error: reportError } = await supabase.from('diagnostic_reports').insert({
+        job_id: jobId,
+        dtc_codes: dtcCodes,
+        battery_drain_ma: Number.isFinite(parsedDrain) ? parsedDrain : null,
+        module_notes: moduleNotes || null,
+      });
 
-    const { error: reportError } = await supabase.from('diagnostic_reports').insert({
-      job_id: jobId,
-      dtc_codes: dtcCodes,
-      battery_drain_ma: Number.isFinite(parsedDrain) ? parsedDrain : null,
-      module_notes: moduleNotes || null,
-    });
+      if (reportError) {
+        toast.error('Spremanje dijagnostike nije uspjelo.');
+        return false;
+      }
 
-    if (reportError) {
-      setIsSaving(false);
-      toast.error('Spremanje dijagnostičkog nalaza nije uspjelo.');
-      return;
-    }
+      const { error: jobError } = await supabase
+        .from('jobs')
+        .update({ diagnostic_notes: diagnosticNotes || null })
+        .eq('id', jobId);
 
-    const { error: jobError } = await supabase
-      .from('jobs')
-      .update({ diagnostic_notes: diagnosticNotes || null })
-      .eq('id', jobId);
+      if (jobError) {
+        toast.error('Dijagnostika je spremljena, ali napomene nisu.');
+        return false;
+      }
 
-    if (jobError) {
-      setIsSaving(false);
-      toast.error('Nalaz je spremljen, ali napomene naloga nisu ažurirane.');
-      return;
-    }
+      await supabase.from('job_events').insert({
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_type: 'DIAGNOSTIC_REPORT_SAVED',
+        actor: 'mechanic',
+        message: dtcCodes.length > 0 ? `Dijagnostički nalaz spremljen: ${dtcCodes.join(', ')}.` : 'Dijagnostički nalaz spremljen.',
+        metadata: { dtcCodes, batteryDrainMa: parsedDrain },
+      });
 
-    await supabase.from('job_events').insert({
-      tenant_id: tenantId,
-      job_id: jobId,
-      event_type: 'DIAGNOSTIC_REPORT_SAVED',
-      actor: 'mechanic',
-      message: dtcCodes.length > 0 ? `Dijagnostički nalaz spremljen: ${dtcCodes.join(', ')}.` : 'Dijagnostički nalaz spremljen.',
-      metadata: { dtcCodes, batteryDrainMa: parsedDrain },
-    });
-
-    setIsSaving(false);
-    toast.success('Dijagnostički nalaz spremljen.');
-    onSaved?.(diagnosticNotes);
-  }
+      savedRef.current = snapshot(dtcCodes, batteryDrainMa, moduleNotes, diagnosticNotes);
+      onSaved?.(diagnosticNotes);
+      return true;
+    },
+  }));
 
   if (isLoading) {
     return (
@@ -157,11 +160,6 @@ export default function DiagnosticWorkbench({
 
   return (
     <fieldset disabled={locked} className="space-y-4">
-      {locked && (
-        <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
-          Nalog je zaključan — nalaz se više ne može mijenjati.
-        </p>
-      )}
       {/* Battery drain — highlighted per spec, not buried among other fields */}
       <div className="flex items-center gap-3 rounded-xl border-2 border-electric-blue/30 bg-electric-blue/5 px-3 py-2.5 dark:border-electric-blue/40 dark:bg-electric-blue/10">
         <BatteryWarning className="h-5 w-5 flex-shrink-0 text-electric-blue" strokeWidth={2} />
@@ -175,7 +173,7 @@ export default function DiagnosticWorkbench({
             inputMode="decimal"
             value={batteryDrainMa}
             onChange={(e) => setBatteryDrainMa(e.target.value.replace(/[^0-9,.-]/g, ''))}
-            placeholder="npr. 350"
+            placeholder="—"
             className="mt-0.5 w-full bg-transparent text-lg font-bold text-slate-900 focus:outline-none dark:text-slate-100"
           />
         </div>
@@ -222,7 +220,7 @@ export default function DiagnosticWorkbench({
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onKeyDown={handleInputKeyDown}
-              placeholder="Upišite kod (npr. P0300) ili pretražite..."
+              placeholder="Dodaj kod"
               className="w-full bg-transparent text-sm text-slate-900 focus:outline-none dark:text-slate-100"
             />
           </div>
@@ -258,14 +256,13 @@ export default function DiagnosticWorkbench({
 
       <div>
         <label htmlFor="moduleNotes" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-          Napomene o modulima / CAN-bus / sleep modu
+          Moduli / CAN-bus
         </label>
         <textarea
           id="moduleNotes"
           rows={2}
           value={moduleNotes}
           onChange={(e) => setModuleNotes(e.target.value)}
-          placeholder="Npr. vozilo ulazi u sleep mod nakon 40 min, CAN-bus integritet uredan..."
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
@@ -273,7 +270,7 @@ export default function DiagnosticWorkbench({
       <div>
         <div className="mb-1.5 flex items-center justify-between">
           <label htmlFor="diagnosticNotes" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Dijagnostičke napomene (scope očitanja, integritet instalacije)
+            Nalaz dijagnostike
           </label>
           {dictationSupported && (
             <button
@@ -297,22 +294,11 @@ export default function DiagnosticWorkbench({
           rows={3}
           value={diagnosticNotes}
           onChange={(e) => setDiagnosticNotes(e.target.value)}
-          placeholder="Nalaz dijagnostike — odvojeno od popisa izvedenih radova ispod."
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
-
-      {!locked && (
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-        >
-          {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2} />}
-          {isSaving ? 'Spremanje…' : 'Spremi dijagnostički nalaz'}
-        </button>
-      )}
     </fieldset>
   );
-}
+});
+
+export default DiagnosticWorkbench;

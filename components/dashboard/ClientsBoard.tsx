@@ -60,7 +60,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Traži ime, telefon, OIB ili vozilo..."
+          placeholder="Traži"
           className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
         />
       </div>

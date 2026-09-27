@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Lock, Loader2, Save } from 'lucide-react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { SYMPTOM_OPTIONS, type SymptomCode } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
 import type { Client, Vehicle } from '@/types/database';
+import type { SectionHandle } from './sectionHandle';
 
 interface ClientVehicleEditorProps {
   jobId: string;
@@ -19,16 +19,10 @@ interface ClientVehicleEditorProps {
   onSaved?: (data: { client: Client; vehicle: Vehicle; symptoms: string[]; isEmergency: boolean }) => void;
 }
 
-export default function ClientVehicleEditor({
-  jobId,
-  tenantId,
-  client,
-  vehicle,
-  symptoms,
-  isEmergency,
-  locked,
-  onSaved,
-}: ClientVehicleEditorProps) {
+const ClientVehicleEditor = forwardRef<SectionHandle, ClientVehicleEditorProps>(function ClientVehicleEditor(
+  { jobId, tenantId, client, vehicle, symptoms, isEmergency, locked, onSaved },
+  ref
+) {
   const [firstName, setFirstName] = useState(client.first_name);
   const [lastName, setLastName] = useState(client.last_name);
   const [phoneNumber, setPhoneNumber] = useState(client.phone_number);
@@ -41,72 +35,69 @@ export default function ClientVehicleEditor({
   const [registrationPlate, setRegistrationPlate] = useState(vehicle.registration_plate ?? '');
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomCode[]>(symptoms as SymptomCode[]);
   const [emergency, setEmergency] = useState(isEmergency);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const snapshot = () =>
+    JSON.stringify([firstName, lastName, phoneNumber, address, oib, make, model, year, vin, registrationPlate, selectedSymptoms, emergency]);
+  const savedRef = useRef<string | null>(null);
+  if (savedRef.current === null) savedRef.current = snapshot();
 
   function toggleSymptom(code: SymptomCode) {
     if (locked) return;
     setSelectedSymptoms((prev) => (prev.includes(code) ? prev.filter((s) => s !== code) : [...prev, code]));
   }
 
-  async function handleSave() {
-    setIsSaving(true);
-    const supabase = createBrowserSupabaseClient();
+  useImperativeHandle(ref, () => ({
+    isDirty: () => snapshot() !== savedRef.current,
+    save: async () => {
+      const supabase = createBrowserSupabaseClient();
 
-    const [clientRes, vehicleRes, jobRes] = await Promise.all([
-      supabase
-        .from('clients')
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          phone_number: phoneNumber,
-          address: address || null,
-          oib: oib || null,
-        })
-        .eq('id', client.id)
-        .select('*')
-        .single(),
-      supabase
-        .from('vehicles')
-        .update({
-          make: make || null,
-          model: model || null,
-          year: year ? Number(year) : null,
-          vin: vin || null,
-          registration_plate: registrationPlate,
-        })
-        .eq('id', vehicle.id)
-        .select('*')
-        .single(),
-      supabase
-        .from('jobs')
-        .update({ symptoms: selectedSymptoms, is_emergency: emergency })
-        .eq('id', jobId),
-    ]);
+      const [clientRes, vehicleRes, jobRes] = await Promise.all([
+        supabase
+          .from('clients')
+          .update({
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber,
+            address: address || null,
+            oib: oib || null,
+          })
+          .eq('id', client.id)
+          .select('*')
+          .single(),
+        supabase
+          .from('vehicles')
+          .update({
+            make: make || null,
+            model: model || null,
+            year: year ? Number(year) : null,
+            vin: vin || null,
+            registration_plate: registrationPlate,
+          })
+          .eq('id', vehicle.id)
+          .select('*')
+          .single(),
+        supabase.from('jobs').update({ symptoms: selectedSymptoms, is_emergency: emergency }).eq('id', jobId),
+      ]);
 
-    setIsSaving(false);
+      if (clientRes.error || vehicleRes.error || jobRes.error || !clientRes.data || !vehicleRes.data) {
+        toast.error('Spremanje podataka o klijentu i vozilu nije uspjelo.');
+        return false;
+      }
 
-    if (clientRes.error || vehicleRes.error || jobRes.error || !clientRes.data || !vehicleRes.data) {
-      toast.error('Spremanje podataka nije uspjelo.');
-      return;
-    }
+      await supabase.from('job_events').insert({
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_type: 'JOB_DETAILS_EDITED',
+        actor: 'mechanic',
+        message: 'Podaci o klijentu/vozilu ažurirani.',
+        metadata: {},
+      });
 
-    await supabase.from('job_events').insert({
-      tenant_id: tenantId,
-      job_id: jobId,
-      event_type: 'JOB_DETAILS_EDITED',
-      actor: 'mechanic',
-      message: 'Podaci o klijentu/vozilu ažurirani.',
-      metadata: {},
-    });
-
-    toast.success('Podaci spremljeni.');
-    onSaved?.({
-      client: clientRes.data,
-      vehicle: vehicleRes.data,
-      symptoms: selectedSymptoms,
-      isEmergency: emergency,
-    });
-  }
+      savedRef.current = snapshot();
+      onSaved?.({ client: clientRes.data, vehicle: vehicleRes.data, symptoms: selectedSymptoms, isEmergency: emergency });
+      return true;
+    },
+  }));
 
   const inputClass = (disabled: boolean) =>
     cn(
@@ -116,55 +107,26 @@ export default function ClientVehicleEditor({
 
   return (
     <div className="space-y-4">
-      {locked && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
-          <Lock className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
-          Nalog je potvrđen i zaključan — podaci se više ne mogu mijenjati.
-        </div>
-      )}
-
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Ime</label>
-          <input
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            disabled={locked}
-            className={inputClass(locked)}
-          />
+          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={locked} className={inputClass(locked)} />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Prezime</label>
-          <input
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            disabled={locked}
-            className={inputClass(locked)}
-          />
+          <input value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={locked} className={inputClass(locked)} />
         </div>
       </div>
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Telefon</label>
-        <input
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          disabled={locked}
-          className={inputClass(locked)}
-        />
+        <input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={locked} className={inputClass(locked)} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Adresa (za račun)
-          </label>
-          <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            disabled={locked}
-            className={inputClass(locked)}
-          />
+          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Adresa</label>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} disabled={locked} className={inputClass(locked)} />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">OIB</label>
@@ -180,9 +142,7 @@ export default function ClientVehicleEditor({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-          Registarska oznaka
-        </label>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Registarska oznaka</label>
         <input
           value={registrationPlate}
           onChange={(e) => setRegistrationPlate(e.target.value.toUpperCase())}
@@ -282,18 +242,8 @@ export default function ClientVehicleEditor({
           />
         </span>
       </button>
-
-      {!locked && (
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-        >
-          {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2} />}
-          {isSaving ? 'Spremanje…' : 'Spremi podatke'}
-        </button>
-      )}
     </div>
   );
-}
+});
+
+export default ClientVehicleEditor;

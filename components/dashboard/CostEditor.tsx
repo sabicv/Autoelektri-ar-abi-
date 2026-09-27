@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { formatEuroHR } from '@/lib/format';
+import type { SectionHandle } from './sectionHandle';
 
 interface CostEditorProps {
   jobId: string;
@@ -20,49 +20,48 @@ function parseEuro(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-export default function CostEditor({
-  jobId,
-  tenantId,
-  initialLaborCost,
-  initialPartsCost,
-  locked = false,
-  onSaved,
-}: CostEditorProps) {
+const inputClass =
+  'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100';
+
+const CostEditor = forwardRef<SectionHandle, CostEditorProps>(function CostEditor(
+  { jobId, tenantId, initialLaborCost, initialPartsCost, locked = false, onSaved },
+  ref
+) {
   const [laborInput, setLaborInput] = useState(initialLaborCost ? String(initialLaborCost) : '');
   const [partsInput, setPartsInput] = useState(initialPartsCost ? String(initialPartsCost) : '');
-  const [isSaving, setIsSaving] = useState(false);
+  const savedRef = useRef({ labor: initialLaborCost, parts: initialPartsCost });
 
   const laborCost = parseEuro(laborInput);
   const partsCost = parseEuro(partsInput);
 
-  async function handleSave() {
-    setIsSaving(true);
-    const supabase = createBrowserSupabaseClient();
+  useImperativeHandle(ref, () => ({
+    isDirty: () => laborCost !== savedRef.current.labor || partsCost !== savedRef.current.parts,
+    save: async () => {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase
+        .from('jobs')
+        .update({ total_labor_cost: laborCost, total_parts_cost: partsCost })
+        .eq('id', jobId);
 
-    const { error } = await supabase
-      .from('jobs')
-      .update({ total_labor_cost: laborCost, total_parts_cost: partsCost })
-      .eq('id', jobId);
+      if (error) {
+        toast.error('Spremanje cijene nije uspjelo.');
+        return false;
+      }
 
-    if (error) {
-      setIsSaving(false);
-      toast.error('Spremanje cijene nije uspjelo.');
-      return;
-    }
+      await supabase.from('job_events').insert({
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_type: 'COST_UPDATED',
+        actor: 'mechanic',
+        message: `Cijena ažurirana — rad: ${formatEuroHR(laborCost)}, dijelovi: ${formatEuroHR(partsCost)}.`,
+        metadata: { laborCost, partsCost },
+      });
 
-    await supabase.from('job_events').insert({
-      tenant_id: tenantId,
-      job_id: jobId,
-      event_type: 'COST_UPDATED',
-      actor: 'mechanic',
-      message: `Cijena ažurirana — rad: ${formatEuroHR(laborCost)}, dijelovi: ${formatEuroHR(partsCost)}.`,
-      metadata: { laborCost, partsCost },
-    });
-
-    setIsSaving(false);
-    toast.success('Cijena spremljena.');
-    onSaved?.(laborCost, partsCost);
-  }
+      savedRef.current = { labor: laborCost, parts: partsCost };
+      onSaved?.(laborCost, partsCost);
+      return true;
+    },
+  }));
 
   return (
     <div className="space-y-3">
@@ -79,7 +78,7 @@ export default function CostEditor({
             onChange={(e) => setLaborInput(e.target.value.replace(/[^0-9,.-]/g, ''))}
             disabled={locked}
             placeholder="0,00"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+            className={inputClass}
           />
         </div>
         <div>
@@ -94,27 +93,16 @@ export default function CostEditor({
             onChange={(e) => setPartsInput(e.target.value.replace(/[^0-9,.-]/g, ''))}
             disabled={locked}
             placeholder="0,00"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+            className={inputClass}
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Ukupno: <span className="font-bold text-slate-900 dark:text-slate-100">{formatEuroHR(laborCost + partsCost)}</span>
-        </p>
-        {!locked && (
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2} />}
-            Spremi
-          </button>
-        )}
-      </div>
+      <p className="text-sm text-slate-500 dark:text-slate-400">
+        Ukupno: <span className="font-bold text-slate-900 dark:text-slate-100">{formatEuroHR(laborCost + partsCost)}</span>
+      </p>
     </div>
   );
-}
+});
+
+export default CostEditor;

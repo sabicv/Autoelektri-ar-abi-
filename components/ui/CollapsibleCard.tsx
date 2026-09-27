@@ -34,7 +34,10 @@ export default function CollapsibleCard({ title, icon, summary, defaultOpen = fa
         />
       </button>
       {!open && summary && <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">{summary}</div>}
-      {open && <div className="mt-3">{children}</div>}
+      {/* Kept mounted while closed so unsaved edits (and form refs) survive collapsing. */}
+      <div className="mt-3" hidden={!open}>
+        {children}
+      </div>
     </Card>
   );
 }

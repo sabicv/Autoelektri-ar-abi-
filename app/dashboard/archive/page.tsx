@@ -41,7 +41,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
           type="search"
           name="q"
           defaultValue={query}
-          placeholder="Tablica, VIN, ime, telefon, OIB, DTC kod, bilješka..."
+          placeholder="Traži u arhivi"
           className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-10 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
         />
         {query && (

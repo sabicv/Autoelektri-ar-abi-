@@ -73,7 +73,6 @@ export async function ArchiveJobsTab({ supabase }: { supabase: ServerSupabaseCli
   const { vehicles, clients } = await loadJobOwners(supabase, jobs);
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 dark:text-slate-400">Zadnjih {jobs.length} radnih naloga, najnoviji prvi.</p>
       <JobList jobs={jobs} vehicles={vehicles} clients={clients} />
     </div>
   );
