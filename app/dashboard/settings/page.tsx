@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { requireOwner } from '@/lib/session';
 import { createAdminClient } from '@/lib/supabase/admin';
 import TenantSettingsForm from '@/components/dashboard/TenantSettingsForm';
@@ -14,9 +13,8 @@ export default async function SettingsPage() {
     supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle(),
     supabase.from('profiles').select('*').eq('tenant_id', profile.tenant_id).order('created_at'),
   ]);
-  if (!tenant) {
-    redirect('/login');
-  }
+  // Suspended workshop — the layout already shows the lock screen.
+  if (!tenant) return null;
 
   // Login emails live in auth.users, not profiles — a handful of lookups
   // for a workshop-sized team.

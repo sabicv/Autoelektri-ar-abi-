@@ -45,6 +45,8 @@ export const PHOTO_TAGS: readonly PhotoTag[] = [
 
 export type StaffRole = 'owner' | 'mechanic';
 
+export type TenantStatus = 'active' | 'trial' | 'suspended';
+
 // ---------------------------------------------------------------------
 // Supabase-generated-style Database interface
 // (Row = select shape, Insert = required/optional for insert,
@@ -66,6 +68,8 @@ export interface Database {
           daily_parking_fee: number;
           emergency_surcharge_percent: number;
           vapi_phone_number_id: string | null;
+          status: TenantStatus;
+          status_note: string | null;
           created_at: string;
         };
         Insert: {
@@ -80,6 +84,8 @@ export interface Database {
           daily_parking_fee?: number;
           emergency_surcharge_percent?: number;
           vapi_phone_number_id?: string | null;
+          status?: TenantStatus;
+          status_note?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['tenants']['Insert']>;
@@ -402,6 +408,7 @@ export interface Database {
     Enums: {
       job_status: JobStatus;
       photo_tag: PhotoTag;
+      tenant_status: TenantStatus;
     };
     CompositeTypes: Record<string, never>;
   };

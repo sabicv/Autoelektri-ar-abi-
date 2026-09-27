@@ -521,3 +521,47 @@ create policy "tenants_update_own" on public.tenants
   to authenticated
   using (id = public.auth_tenant_id() and public.auth_role() = 'owner')
   with check (id = public.auth_tenant_id() and public.auth_role() = 'owner');
+
+-- ---------------------------------------------------------------------
+-- 14. Tenant subscription lock
+-- ---------------------------------------------------------------------
+
+-- Set by the platform operator in the SQL editor until real billing exists:
+--   update public.tenants set status = 'suspended', status_note = '...' where slug = '...';
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'tenant_status') then
+    create type public.tenant_status as enum ('active', 'trial', 'suspended');
+  end if;
+end $$;
+
+alter table public.tenants add column if not exists status public.tenant_status not null default 'active';
+alter table public.tenants add column if not exists status_note text;
+
+comment on column public.tenants.status is 'suspended = all staff of this workshop are locked out (auth_tenant_id() resolves to null). Operator-only.';
+comment on column public.tenants.status_note is 'Operator''s internal note, e.g. why a workshop was suspended. Never shown in the app.';
+
+-- A suspended workshop resolves to no tenant at all, so every tenant-scoped
+-- policy (tables and storage alike) denies its staff without editing each
+-- policy. The public QR intake path doesn't use this and keeps working.
+create or replace function public.auth_tenant_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.tenant_id
+  from public.profiles p
+  join public.tenants t on t.id = p.tenant_id
+  where p.id = auth.uid() and t.status <> 'suspended'
+$$;
+
+-- Staff may edit their workshop's settings but never its status — without
+-- this column list, tenants_update_own would let an owner un-suspend or
+-- self-upgrade from the browser.
+revoke update on public.tenants from authenticated;
+grant update (
+  name, slug, phone, address, logo_url,
+  free_parking_days, daily_parking_fee, emergency_surcharge_percent
+) on public.tenants to authenticated;

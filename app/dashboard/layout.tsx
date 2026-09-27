@@ -1,32 +1,23 @@
-import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSessionProfile } from '@/lib/session';
 import DashboardNav from '@/components/dashboard/DashboardNav';
+import TenantSuspendedScreen from '@/components/dashboard/TenantSuspendedScreen';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-
-  if (!profile) {
-    // Authenticated, but no workshop assigned to this account yet.
-    redirect('/login');
-  }
+  const { supabase, profile } = await getSessionProfile();
 
   const { data: tenant } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle();
 
+  // RLS hides a suspended workshop's own row from its staff (see
+  // auth_tenant_id() in schema.sql), so "profile but no tenant" = locked.
+  if (!tenant) {
+    return <TenantSuspendedScreen />;
+  }
+
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-workshop-dark">
-      <DashboardNav tenantName={tenant?.name ?? 'Radionica'} role={profile.role} />
+      <DashboardNav tenantName={tenant.name} role={profile.role} />
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
     </div>
   );
