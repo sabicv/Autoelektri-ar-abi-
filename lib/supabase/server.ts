@@ -10,6 +10,8 @@ interface CookieToSet {
   options: CookieOptions;
 }
 
+export type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+
 // Anon-key client for Server Components / Route Handlers. Respects RLS —
 // use lib/supabase/admin.ts when a trusted server-side operation needs to
 // bypass it (e.g. the triage submit route).

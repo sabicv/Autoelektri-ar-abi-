@@ -1,6 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import { getSessionProfile } from '@/lib/session';
 import { formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { jobTotal } from '@/lib/finance';
 import PrintButton from '@/components/dashboard/PrintButton';
 import type { DiagnosticReport } from '@/types/database';
 
@@ -12,12 +13,8 @@ interface PageProps {
 
 export default async function WorkOrderPage({ params }: PageProps) {
   const { jobId } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const { supabase, profile } = await getSessionProfile();
+  const showPrices = profile.role === 'owner';
 
   const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).maybeSingle();
   if (!job) notFound();
@@ -32,7 +29,7 @@ export default async function WorkOrderPage({ params }: PageProps) {
   if (!client || !vehicle || !tenant) notFound();
 
   const dtcCodes = Array.from(new Set((reports ?? []).flatMap((r: DiagnosticReport) => r.dtc_codes)));
-  const totalCost = job.total_labor_cost + job.total_parts_cost + job.accrued_parking_fees;
+  const totalCost = jobTotal(job);
   const reference = job.id.slice(0, 8).toUpperCase();
 
   return (
@@ -101,26 +98,33 @@ export default async function WorkOrderPage({ params }: PageProps) {
           </div>
         )}
 
-        <div className="mt-8 border-t border-slate-200 pt-4 dark:border-workshop-border dark:print:border-slate-200">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Rad</span>
-            <span className="font-semibold">{formatEuroHR(job.total_labor_cost)}</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between text-sm">
-            <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Dijelovi</span>
-            <span className="font-semibold">{formatEuroHR(job.total_parts_cost)}</span>
-          </div>
-          {job.accrued_parking_fees > 0 && (
-            <div className="mt-1 flex items-center justify-between text-sm">
-              <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Ležarina</span>
-              <span className="font-semibold">{formatEuroHR(job.accrued_parking_fees)}</span>
+        {showPrices && (
+          <div className="mt-8 border-t border-slate-200 pt-4 dark:border-workshop-border dark:print:border-slate-200">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Rad</span>
+              <span className="font-semibold">{formatEuroHR(job.total_labor_cost)}</span>
             </div>
-          )}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-base dark:border-workshop-border dark:print:border-slate-200">
-            <span className="font-bold">Ukupno</span>
-            <span className="font-black">{formatEuroHR(totalCost)}</span>
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Dijelovi</span>
+              <span className="font-semibold">{formatEuroHR(job.total_parts_cost)}</span>
+            </div>
+            {job.accrued_parking_fees > 0 && (
+              <div className="mt-1 flex items-center justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400 dark:print:text-slate-500">Ležarina</span>
+                <span className="font-semibold">{formatEuroHR(job.accrued_parking_fees)}</span>
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-base dark:border-workshop-border dark:print:border-slate-200">
+              <span className="font-bold">Ukupno</span>
+              <span className="font-black">{formatEuroHR(totalCost)}</span>
+            </div>
+            {job.payment_status === 'PAID' && (
+              <p className="mt-3 text-right text-sm font-bold uppercase tracking-wide text-emerald-600">
+                Plaćeno{job.paid_at ? ` ${new Date(job.paid_at).toLocaleDateString('hr-HR')}` : ''}
+              </p>
+            )}
           </div>
-        </div>
+        )}
 
         <p className="mt-8 text-center text-xs text-slate-400">
           Ovo je interni radni nalog / predračun, a ne fiskalizirani račun u smislu Zakona o fiskalizaciji.

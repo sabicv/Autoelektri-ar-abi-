@@ -47,6 +47,10 @@ export type StaffRole = 'owner' | 'mechanic';
 
 export type TenantStatus = 'active' | 'trial' | 'suspended';
 
+export type PaymentStatus = 'UNPAID' | 'PAID';
+
+export type ArchiveSearchKind = 'vehicle' | 'job' | 'document';
+
 // ---------------------------------------------------------------------
 // Supabase-generated-style Database interface
 // (Row = select shape, Insert = required/optional for insert,
@@ -213,6 +217,8 @@ export interface Database {
           total_parts_cost: number;
           total_labor_cost: number;
           accrued_parking_fees: number;
+          payment_status: PaymentStatus;
+          paid_at: string | null;
           finished_at: string | null;
           collected_at: string | null;
           confirmed_at: string | null;
@@ -234,6 +240,8 @@ export interface Database {
           total_parts_cost?: number;
           total_labor_cost?: number;
           accrued_parking_fees?: number;
+          payment_status?: PaymentStatus;
+          paid_at?: string | null;
           finished_at?: string | null;
           collected_at?: string | null;
           confirmed_at?: string | null;
@@ -374,6 +382,17 @@ export interface Database {
         Args: Record<string, never>;
         Returns: StaffRole;
       };
+      search_archive: {
+        Args: { p_query: string };
+        Returns: {
+          kind: ArchiveSearchKind;
+          job_id: string | null;
+          vehicle_id: string | null;
+          title: string | null;
+          subtitle: string | null;
+          created_at: string;
+        }[];
+      };
       submit_triage_intake: {
         Args: {
           p_tenant_slug: string;
@@ -409,6 +428,7 @@ export interface Database {
       job_status: JobStatus;
       photo_tag: PhotoTag;
       tenant_status: TenantStatus;
+      payment_status: PaymentStatus;
     };
     CompositeTypes: Record<string, never>;
   };

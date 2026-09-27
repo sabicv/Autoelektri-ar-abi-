@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Phone, Plus, Search, User, Users } from 'lucide-react';
+import { Car, Phone, Plus, Search, User, Users } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import NewJobModal from './NewJobModal';
 import { vehicleLabel } from '@/lib/format';
@@ -74,11 +74,10 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
         <div className="space-y-2">
           {filteredClients.map((client) => {
             const clientVehicles = vehiclesByClient.get(client.id) ?? [];
-            const firstVehicle = clientVehicles[0];
 
             return (
-              <Link key={client.id} href={firstVehicle ? `/dashboard/vehicles/${firstVehicle.id}` : '/dashboard/vehicles'}>
-                <Card hoverLift className="flex items-center gap-3 p-4">
+              <Card key={client.id} className="p-4">
+                <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-electric-blue/10">
                     <User className="h-5 w-5 text-blue-600 dark:text-electric-blue" strokeWidth={2} />
                   </div>
@@ -86,17 +85,29 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
                     <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
                       {client.first_name} {client.last_name}
                     </p>
-                    <p className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                    <a
+                      href={`tel:${client.phone_number}`}
+                      className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400"
+                    >
                       <Phone className="h-3 w-3 flex-shrink-0" strokeWidth={2} /> {client.phone_number}
-                    </p>
-                    {clientVehicles.length > 0 && (
-                      <p className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">
-                        {clientVehicles.map((v) => vehicleLabel(v)).join(', ')}
-                      </p>
-                    )}
+                    </a>
                   </div>
-                </Card>
-              </Link>
+                </div>
+                {clientVehicles.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {clientVehicles.map((v) => (
+                      <Link
+                        key={v.id}
+                        href={`/dashboard/vehicles/${v.id}`}
+                        className="press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-blue-400 dark:border-workshop-border dark:text-slate-200"
+                      >
+                        <Car className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" strokeWidth={2} />
+                        {vehicleLabel(v)}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </Card>
             );
           })}
         </div>

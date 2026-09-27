@@ -565,3 +565,54 @@ grant update (
   name, slug, phone, address, logo_url,
   free_parking_days, daily_parking_fee, emergency_surcharge_percent
 ) on public.tenants to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 15. Payment tracking + owner-only financial fields on jobs
+-- ---------------------------------------------------------------------
+
+-- The job row already is the invoice (labor + parts totals), so paid /
+-- unpaid is two columns here rather than a separate invoices table.
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'payment_status') then
+    create type public.payment_status as enum ('UNPAID', 'PAID');
+  end if;
+end $$;
+
+alter table public.jobs add column if not exists payment_status public.payment_status not null default 'UNPAID';
+alter table public.jobs add column if not exists paid_at timestamptz;
+
+create index if not exists idx_jobs_payment_status on public.jobs (tenant_id, payment_status);
+
+-- Mechanics need the rest of a job row (status, notes, work summary), so
+-- RLS — which is row-level only — can't hide these columns, and a column
+-- GRANT can't tell owner from mechanic (both are the `authenticated` DB
+-- role). A trigger can. Service-role callers (auth.uid() is null, e.g.
+-- apply_upsell_response) are trusted server code and pass through.
+create or replace function public.enforce_owner_only_job_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null
+     and coalesce(public.auth_role(), '') <> 'owner'
+     and (
+       new.total_labor_cost is distinct from old.total_labor_cost
+       or new.total_parts_cost is distinct from old.total_parts_cost
+       or new.accrued_parking_fees is distinct from old.accrued_parking_fees
+       or new.payment_status is distinct from old.payment_status
+       or new.paid_at is distinct from old.paid_at
+     ) then
+    raise exception 'Samo vlasnik radionice može mijenjati cijene i plaćanje.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_enforce_owner_only_job_fields on public.jobs;
+create trigger trg_enforce_owner_only_job_fields
+  before update on public.jobs
+  for each row
+  execute function public.enforce_owner_only_job_fields();

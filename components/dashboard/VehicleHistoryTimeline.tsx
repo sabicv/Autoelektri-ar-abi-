@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Search, Wrench } from 'lucide-react';
+import { jobTotal } from '@/lib/finance';
 import Badge, { type BadgeVariant } from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import JobPhotoVault from './JobPhotoVault';
@@ -21,9 +23,10 @@ const STATUS_BADGE_VARIANT: Record<JobStatus, BadgeVariant> = {
 interface VehicleHistoryTimelineProps {
   jobs: Job[];
   reportsByJobId: Map<string, DiagnosticReport[]>;
+  showCosts: boolean;
 }
 
-export default function VehicleHistoryTimeline({ jobs, reportsByJobId }: VehicleHistoryTimelineProps) {
+export default function VehicleHistoryTimeline({ jobs, reportsByJobId, showCosts }: VehicleHistoryTimelineProps) {
   const [dtcQuery, setDtcQuery] = useState('');
 
   const filteredJobs = useMemo(() => {
@@ -57,20 +60,20 @@ export default function VehicleHistoryTimeline({ jobs, reportsByJobId }: Vehicle
           {filteredJobs.map((job) => {
             const reports = reportsByJobId.get(job.id) ?? [];
             const allCodes = Array.from(new Set(reports.flatMap((r) => r.dtc_codes)));
-            const totalCost = job.total_labor_cost + job.total_parts_cost + job.accrued_parking_fees;
-
             return (
               <Card key={job.id} className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <Link href={`/dashboard/jobs/${job.id}`} className="flex items-center gap-2">
                     <Badge variant={STATUS_BADGE_VARIANT[job.status]}>{JOB_STATUS_LABELS_HR[job.status]}</Badge>
                     <span className="text-xs text-slate-400 dark:text-slate-500">
                       {new Date(job.created_at).toLocaleDateString('hr-HR')}
                     </span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    {formatEuroHR(totalCost)}
-                  </span>
+                  </Link>
+                  {showCosts && (
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {formatEuroHR(jobTotal(job))}
+                    </span>
+                  )}
                 </div>
 
                 {allCodes.length > 0 && (

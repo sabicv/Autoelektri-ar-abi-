@@ -1,4 +1,4 @@
-import type { JobStatus, PhotoTag } from '@/types/database';
+import type { JobStatus, PaymentStatus, PhotoTag } from '@/types/database';
 
 export function formatEuroHR(amount: number): string {
   return `${amount.toFixed(2).replace('.', ',')} €`;
@@ -27,6 +27,11 @@ export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {
   NEW_PARTS: 'Novi dijelovi',
   PARTS_INVOICE: 'Račun za dijelove',
   DOCUMENT: 'Dokument',
+};
+
+export const PAYMENT_STATUS_LABELS_HR: Record<PaymentStatus, string> = {
+  UNPAID: 'Neplaćeno',
+  PAID: 'Plaćeno',
 };
 
 interface VehicleLike {

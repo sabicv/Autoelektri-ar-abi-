@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { jobTotal } from '@/lib/finance';
 import {
   loadJobDispatchContext,
   logJobEvent,
@@ -54,7 +56,23 @@ const sendSchema = z.discriminatedUnion('type', [
 
 export const dynamic = 'force-dynamic';
 
+// Messages that quote a price are owner-only, like the rest of finances.
+const OWNER_ONLY_TYPES = new Set(['JOB_FINISHED', 'UPSELL_REQUEST']);
+
 export async function POST(request: Request) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Niste prijavljeni.' }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (!profile) {
+    return NextResponse.json({ error: 'Nalog nije povezan s radionicom.' }, { status: 403 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -72,6 +90,20 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
+  if (OWNER_ONLY_TYPES.has(data.type) && profile.role !== 'owner') {
+    return NextResponse.json({ error: 'Obavijesti s cijenom šalje vlasnik radionice.' }, { status: 403 });
+  }
+
+  // The dispatch helpers use the service-role client, so tenant ownership
+  // must be proven here: RLS only returns the job if it's the caller's.
+  const { data: ownJob } = await supabase.from('jobs').select('id, tenant_id').eq('id', data.jobId).maybeSingle();
+  if (!ownJob) {
+    return NextResponse.json({ error: 'Nalog nije pronađen.' }, { status: 404 });
+  }
+  if (data.type === 'UPSELL_REQUEST' && !data.photoPath.startsWith(`${ownJob.tenant_id}/`)) {
+    return NextResponse.json({ error: 'Nemate pristup ovoj fotografiji.' }, { status: 403 });
+  }
+
   let context;
   try {
     context = await loadJobDispatchContext(data.jobId);
@@ -88,8 +120,7 @@ export async function POST(request: Request) {
 
   switch (data.type) {
     case 'JOB_FINISHED': {
-      const totalAmount = job.total_parts_cost + job.total_labor_cost + job.accrued_parking_fees;
-      result = await sendJobFinishedNotification(data.jobId, totalAmount);
+      result = await sendJobFinishedNotification(data.jobId, jobTotal(job));
       break;
     }
     case 'DIAGNOSTIC_COMPLETE': {

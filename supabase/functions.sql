@@ -226,3 +226,94 @@ comment on function public.recalculate_parking_fees is 'Daily cron: passively re
 
 revoke all on function public.recalculate_parking_fees from public, anon, authenticated;
 grant execute on function public.recalculate_parking_fees to service_role;
+
+-- ---------------------------------------------------------------------
+-- search_archive — one search box across vehicles/clients, job notes,
+-- DTC codes and document captions for the Arhiva page.
+--
+-- Deliberately SECURITY INVOKER (unlike every function above): it runs
+-- with the caller's own session, so RLS keeps each workshop inside its
+-- own data. Making this security definer would leak every tenant's
+-- records into every other tenant's search results.
+-- ---------------------------------------------------------------------
+create or replace function public.search_archive(p_query text)
+returns table (
+  kind text,
+  job_id uuid,
+  vehicle_id uuid,
+  title text,
+  subtitle text,
+  created_at timestamptz
+)
+language sql
+stable
+set search_path = public
+as $$
+  (
+    select
+      'vehicle'::text,
+      null::uuid,
+      v.id,
+      concat_ws(' ', v.registration_plate, v.make, v.model),
+      concat_ws(' · ', c.first_name || ' ' || c.last_name, c.phone_number),
+      v.created_at
+    from public.vehicles v
+    join public.clients c on c.id = v.client_id
+    where v.tenant_id = public.auth_tenant_id()
+      and (
+        v.registration_plate ilike '%' || p_query || '%'
+        or v.vin ilike '%' || p_query || '%'
+        or concat_ws(' ', v.make, v.model) ilike '%' || p_query || '%'
+        or (c.first_name || ' ' || c.last_name) ilike '%' || p_query || '%'
+        or c.phone_number ilike '%' || p_query || '%'
+        or c.oib ilike '%' || p_query || '%'
+      )
+    order by v.created_at desc
+    limit 20
+  )
+  union all
+  (
+    select
+      'job'::text,
+      j.id,
+      j.vehicle_id,
+      v.registration_plate,
+      left(coalesce(j.work_summary, j.diagnostic_notes, ''), 140),
+      j.created_at
+    from public.jobs j
+    join public.vehicles v on v.id = j.vehicle_id
+    where j.tenant_id = public.auth_tenant_id()
+      and (
+        j.work_summary ilike '%' || p_query || '%'
+        or j.diagnostic_notes ilike '%' || p_query || '%'
+        or exists (
+          select 1 from public.diagnostic_reports d
+          where d.job_id = j.id and array_to_string(d.dtc_codes, ' ') ilike '%' || p_query || '%'
+        )
+      )
+    order by j.created_at desc
+    limit 20
+  )
+  union all
+  (
+    select
+      'document'::text,
+      p.job_id,
+      j.vehicle_id,
+      p.caption,
+      v.registration_plate,
+      p.created_at
+    from public.job_photos p
+    join public.jobs j on j.id = p.job_id
+    join public.vehicles v on v.id = j.vehicle_id
+    where p.tenant_id = public.auth_tenant_id()
+      and p.caption ilike '%' || p_query || '%'
+    order by p.created_at desc
+    limit 10
+  )
+$$;
+
+comment on function public.search_archive is 'Arhiva search. SECURITY INVOKER on purpose — RLS must scope results to the caller''s workshop.';
+
+revoke all on function public.search_archive from public, anon;
+grant execute on function public.search_archive to authenticated;

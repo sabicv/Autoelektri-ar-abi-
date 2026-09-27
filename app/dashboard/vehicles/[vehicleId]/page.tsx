@@ -1,8 +1,9 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Car, Phone, User } from 'lucide-react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSessionProfile } from '@/lib/session';
 import { vehicleLabel } from '@/lib/format';
+import { redactJobForRole } from '@/lib/finance';
 import Card from '@/components/ui/Card';
 import VehicleHistoryTimeline from '@/components/dashboard/VehicleHistoryTimeline';
 import type { DiagnosticReport } from '@/types/database';
@@ -15,12 +16,8 @@ interface PageProps {
 
 export default async function VehiclePassportPage({ params }: PageProps) {
   const { vehicleId } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const { supabase, profile } = await getSessionProfile();
+  const isOwner = profile.role === 'owner';
 
   const { data: vehicle } = await supabase.from('vehicles').select('*').eq('id', vehicleId).maybeSingle();
   if (!vehicle) notFound();
@@ -33,7 +30,7 @@ export default async function VehiclePassportPage({ params }: PageProps) {
     .eq('vehicle_id', vehicleId)
     .order('created_at', { ascending: false });
 
-  const jobList = jobs ?? [];
+  const jobList = (jobs ?? []).map((j) => redactJobForRole(j, profile.role));
   const jobIds = jobList.map((j) => j.id);
 
   const { data: reports } =
@@ -51,10 +48,10 @@ export default async function VehiclePassportPage({ params }: PageProps) {
   return (
     <div className="space-y-4">
       <Link
-        href="/dashboard/vehicles"
+        href={isOwner ? '/dashboard/archive?tab=vozila' : '/dashboard/clients'}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
       >
-        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Natrag na pretragu
+        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> {isOwner ? 'Natrag na arhivu' : 'Natrag na klijente'}
       </Link>
 
       <Card className="p-5">
@@ -92,7 +89,7 @@ export default async function VehiclePassportPage({ params }: PageProps) {
         Povijest naloga ({jobList.length})
       </h2>
 
-      <VehicleHistoryTimeline jobs={jobList} reportsByJobId={reportsByJobId} />
+      <VehicleHistoryTimeline jobs={jobList} reportsByJobId={reportsByJobId} showCosts={isOwner} />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import Button from '@/components/ui/Button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import ClientVehicleEditor from './ClientVehicleEditor';
 import CostEditor from './CostEditor';
+import PaymentStatusControl from './PaymentStatusControl';
 import DiagnosticWorkbench from './DiagnosticWorkbench';
 import PartsSearchLinks from './PartsSearchLinks';
 import VoiceWorkLogger from './VoiceWorkLogger';
@@ -35,8 +36,9 @@ import NotificationDraftModal, { type NotificationType } from './NotificationDra
 import SmartLockboxModal from './SmartLockboxModal';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
+import { jobTotal, redactJobForRole } from '@/lib/finance';
 import { cn } from '@/lib/utils';
-import { JOB_STATUSES, type Client, type Job, type JobEvent, type JobStatus, type JobUpdate, type Vehicle } from '@/types/database';
+import type { Client, Job, JobEvent, JobStatus, JobUpdate, StaffRole, Vehicle } from '@/types/database';
 
 const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'PENDING_TRIAGE',
@@ -64,9 +66,11 @@ interface JobDetailViewProps {
   client: Client;
   vehicle: Vehicle;
   events: JobEvent[];
+  viewerRole: StaffRole;
 }
 
-export default function JobDetailView({ job, client, vehicle, events }: JobDetailViewProps) {
+export default function JobDetailView({ job, client, vehicle, events, viewerRole }: JobDetailViewProps) {
+  const isOwner = viewerRole === 'owner';
   const [currentJob, setCurrentJob] = useState(job);
   const [currentClient, setCurrentClient] = useState(client);
   const [currentVehicle, setCurrentVehicle] = useState(vehicle);
@@ -78,7 +82,7 @@ export default function JobDetailView({ job, client, vehicle, events }: JobDetai
   const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
 
   const locked = currentJob.confirmed_at !== null;
-  const totalCost = currentJob.total_labor_cost + currentJob.total_parts_cost + currentJob.accrued_parking_fees;
+  const totalCost = jobTotal(currentJob);
   const daysParked = currentJob.finished_at ? daysSince(currentJob.finished_at) : 0;
   const showParkedDuration = currentJob.status === 'FINISHED_AWAITING_PICKUP' && daysParked > 0;
   const clientFirstName = currentClient.first_name;
@@ -119,7 +123,7 @@ export default function JobDetailView({ job, client, vehicle, events }: JobDetai
       metadata: { from: currentJob.status, to: newStatus },
     });
 
-    setCurrentJob(data);
+    setCurrentJob(redactJobForRole(data, viewerRole));
     toast.success(`Status: ${JOB_STATUS_LABELS_HR[newStatus]}`);
   }
 
@@ -153,7 +157,7 @@ export default function JobDetailView({ job, client, vehicle, events }: JobDetai
       metadata: {},
     });
 
-    setCurrentJob(data);
+    setCurrentJob(redactJobForRole(data, viewerRole));
     toast.success('Nalog je potvrđen i zaključan.');
   }
 
@@ -219,9 +223,11 @@ export default function JobDetailView({ job, client, vehicle, events }: JobDetai
           )}
           {currentJob.status === 'FINISHED_AWAITING_PICKUP' && (
             <>
-              <Button variant="primary" size="sm" onClick={() => setNotificationType('JOB_FINISHED')}>
-                <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta
-              </Button>
+              {isOwner && (
+                <Button variant="primary" size="sm" onClick={() => setNotificationType('JOB_FINISHED')}>
+                  <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta
+                </Button>
+              )}
               <Button variant="success" size="sm" onClick={() => setLockboxOpen(true)}>
                 <KeyRound className="h-4 w-4" strokeWidth={2} /> Pametni sef
               </Button>
@@ -266,19 +272,22 @@ export default function JobDetailView({ job, client, vehicle, events }: JobDetai
         />
       </Card>
 
-      <Card className="p-4">
-        <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-200">Cijena</h2>
-        <CostEditor
-          jobId={currentJob.id}
-          tenantId={currentJob.tenant_id}
-          initialLaborCost={currentJob.total_labor_cost}
-          initialPartsCost={currentJob.total_parts_cost}
-          locked={locked}
-          onSaved={(laborCost, partsCost) =>
-            setCurrentJob((prev) => ({ ...prev, total_labor_cost: laborCost, total_parts_cost: partsCost }))
-          }
-        />
-      </Card>
+      {isOwner && (
+        <Card className="space-y-3 p-4">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">Cijena i plaćanje</h2>
+          <CostEditor
+            jobId={currentJob.id}
+            tenantId={currentJob.tenant_id}
+            initialLaborCost={currentJob.total_labor_cost}
+            initialPartsCost={currentJob.total_parts_cost}
+            locked={locked}
+            onSaved={(laborCost, partsCost) =>
+              setCurrentJob((prev) => ({ ...prev, total_labor_cost: laborCost, total_parts_cost: partsCost }))
+            }
+          />
+          <PaymentStatusControl job={currentJob} onChanged={(patch) => setCurrentJob((prev) => ({ ...prev, ...patch }))} />
+        </Card>
+      )}
 
       <Card className="p-4">
         <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">

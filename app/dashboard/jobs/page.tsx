@@ -1,4 +1,5 @@
 import { getSessionProfile } from '@/lib/session';
+import { redactJobForRole } from '@/lib/finance';
 import JobsBoard from '@/components/dashboard/JobsBoard';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,12 @@ export default async function JobsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Poslovi</h1>
-      <JobsBoard jobs={jobs ?? []} clients={clients ?? []} vehicles={vehicles ?? []} tenantId={profile.tenant_id} />
+      <JobsBoard
+        jobs={(jobs ?? []).map((j) => redactJobForRole(j, profile.role))}
+        clients={clients ?? []}
+        vehicles={vehicles ?? []}
+        tenantId={profile.tenant_id}
+      />
     </div>
   );
 }
