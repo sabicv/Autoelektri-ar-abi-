@@ -49,39 +49,48 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
     let saved = 0;
 
     for (const original of Array.from(fileList)) {
-      const meta = await readPhotoMetadata(original);
-      const file = await compressImage(original);
-      // Staff already has full RLS access to their own tenant's job-vault
-      // folder, so this uploads straight to the final path — no temp
-      // staging + move step needed (that dance exists only for the public,
-      // anonymous triage flow).
-      const path = `${tenantId}/${jobId}/${tag}_${Date.now()}_${sanitizeFileName(file.name)}`;
+      try {
+        const meta = await readPhotoMetadata(original);
+        const file = await compressImage(original);
+        // Staff already has full RLS access to their own tenant's job-vault
+        // folder, so this uploads straight to the final path — no temp
+        // staging + move step needed (that dance exists only for the public,
+        // anonymous triage flow).
+        const path = `${tenantId}/${jobId}/${tag}_${Date.now()}_${sanitizeFileName(file.name)}`;
 
-      const { error: uploadError } = await supabase.storage.from('job-vault').upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
+        const { error: uploadError } = await supabase.storage.from('job-vault').upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
-      if (uploadError) {
-        toast.error(`Prijenos "${file.name}" nije uspio.`);
-        continue;
+        if (uploadError) {
+          console.error('Job photo upload failed', uploadError);
+          toast.error(`Prijenos "${original.name}" nije uspio. Provjerite vezu i pokušajte ponovno.`);
+          continue;
+        }
+
+        const { error: insertError } = await supabase.from('job_photos').insert({
+          job_id: jobId,
+          tenant_id: tenantId,
+          photo_url: path,
+          tag,
+          taken_at: meta.takenAt,
+          gps_lat: meta.gpsLat,
+          gps_lng: meta.gpsLng,
+        });
+
+        if (insertError) {
+          console.error('Job photo record failed', insertError);
+          // A file with no row is invisible everywhere — don't leave it behind.
+          await supabase.storage.from('job-vault').remove([path]);
+          toast.error(`"${original.name}" nije spremljena na nalog. Pokušajte ponovno.`);
+          continue;
+        }
+        saved += 1;
+      } catch (error) {
+        console.error('Job photo processing failed', error);
+        toast.error(`"${original.name}" se ne može obraditi.`);
       }
-
-      const { error: insertError } = await supabase.from('job_photos').insert({
-        job_id: jobId,
-        tenant_id: tenantId,
-        photo_url: path,
-        tag,
-        taken_at: meta.takenAt,
-        gps_lat: meta.gpsLat,
-        gps_lng: meta.gpsLng,
-      });
-
-      if (insertError) {
-        toast.error('Datoteka je prenesena, ali nije zabilježena na nalogu.');
-        continue;
-      }
-      saved += 1;
     }
 
     setIsUploading(false);

@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { enablePush, isPushEnabled, pushSupported } from '@/lib/pushClient';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
+import TenantLogo from '@/components/ui/TenantLogo';
 import { cn } from '@/lib/utils';
 import type { StaffRole } from '@/types/database';
 
@@ -43,7 +44,15 @@ const GRID_COLS: Record<number, string> = {
 // zoom, but controlled in-app and persisted per mechanic.
 const FONT_SCALE_STEPS = [100, 112, 125, 137];
 
-export default function DashboardNav({ tenantName, role }: { tenantName: string; role: StaffRole }) {
+export default function DashboardNav({
+  tenantName,
+  logoUrl,
+  role,
+}: {
+  tenantName: string;
+  logoUrl: string | null;
+  role: StaffRole;
+}) {
   const links = LINKS.filter((link) => role === 'owner' || !link.ownerOnly);
   const pathname = usePathname();
   const router = useRouter();
@@ -117,7 +126,10 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
   return (
     <header className="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
       <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-        <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{tenantName}</span>
+        <Link href="/dashboard/jobs" className="flex min-w-0 items-center gap-2.5">
+          <TenantLogo name={tenantName} logoUrl={logoUrl} />
+          <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{tenantName}</span>
+        </Link>
 
         <button
           type="button"

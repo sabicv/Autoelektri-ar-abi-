@@ -38,6 +38,10 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
+-- The output column tenant_id is also a PL/pgSQL variable, which made
+-- "on conflict (tenant_id, ...)" fail as ambiguous; names in SQL here
+-- always mean table columns.
 declare
   v_tenant_id uuid;
   v_emergency_surcharge_percent numeric;

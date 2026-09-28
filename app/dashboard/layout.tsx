@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-workshop-dark">
-      <DashboardNav tenantName={tenant.name} role={profile.role} />
+      <DashboardNav tenantName={tenant.name} logoUrl={tenant.logo_url} role={profile.role} />
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
     </div>
   );

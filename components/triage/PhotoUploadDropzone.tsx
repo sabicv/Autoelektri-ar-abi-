@@ -63,6 +63,10 @@ export default function PhotoUploadDropzone({
     setGlobalError(null);
 
     const files = Array.from(fileList).slice(0, remainingSlots);
+    // Accumulated here, not read from `photos` each time: that prop is the
+    // snapshot from when the picker closed, so with several files every
+    // onChange would overwrite the previous one and only the last survived.
+    let current = photos;
 
     for (const original of files) {
       const meta = await readPhotoMetadata(original);
@@ -89,7 +93,8 @@ export default function PhotoUploadDropzone({
       }
 
       setPending((prev) => prev.filter((p) => p.id !== localId));
-      onChange([...photos, { path, tag, previewUrl, fileName: file.name, ...meta }]);
+      current = [...current, { path, tag, previewUrl, fileName: file.name, ...meta }];
+      onChange(current);
     }
   }
 

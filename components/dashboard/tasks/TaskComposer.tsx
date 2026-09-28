@@ -65,6 +65,14 @@ export default function TaskComposer({
   }, []);
   const { isSupported, isRecording, interimText, toggleRecording } = useSpeechToText({ onFinalText: handleFinalText });
 
+  // Closing on purpose discards the text. The draft only exists to survive
+  // an accidental reload or a dropped signal, not a deliberate "no".
+  function close() {
+    clearDraft(draftKey);
+    setMessage('');
+    onClose();
+  }
+
   async function send() {
     if (!receiverId) {
       toast.error('Odaberite mehaničara.');
@@ -97,19 +105,17 @@ export default function TaskComposer({
     setIsSending(false);
 
     if (!data) {
-      toast.error('Slanje zadatka nije uspjelo.');
+      toast.error('Slanje zadatka nije uspjelo. Tekst je sačuvan — pokušajte ponovno.');
       return;
     }
 
-    clearDraft(draftKey);
-    setMessage('');
     toast.success(`Zadatak poslan: ${staff.find((s) => s.id === receiverId)?.name ?? 'mehaničar'}`);
     onSent?.(data);
-    onClose();
+    close();
   }
 
   return (
-    <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
+    <Drawer open={open} onOpenChange={(next) => !next && close()}>
       <DrawerContent className="max-h-[95dvh]">
         <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
           {replyTo ? 'Odgovor' : 'Zadatak mehaničaru'}

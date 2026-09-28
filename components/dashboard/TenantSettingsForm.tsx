@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2, Upload } from 'lucide-react';
+import TenantLogo from '@/components/ui/TenantLogo';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { tenantSettingsSchema } from '@/lib/validation/tenant';
 import type { Tenant } from '@/types/database';
@@ -22,6 +23,7 @@ interface FormValues {
 }
 
 export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) {
+  const router = useRouter();
   const [values, setValues] = useState<FormValues>({
     name: tenant.name,
     slug: tenant.slug,
@@ -123,6 +125,8 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
     }
 
     setSavedAt(Date.now());
+    // The header shows the name and logo too.
+    router.refresh();
   }
 
   return (
@@ -131,19 +135,7 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Profil radionice</h2>
 
         <div className="flex items-center gap-4">
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt="Logotip"
-              width={64}
-              height={64}
-              className="h-16 w-16 rounded-full border border-slate-200 object-cover"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400 dark:bg-workshop-surface-hover dark:text-slate-400">
-              Logo
-            </div>
-          )}
+          <TenantLogo name={values.name || tenant.name} logoUrl={logoUrl || null} size="lg" />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
