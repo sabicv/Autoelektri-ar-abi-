@@ -13,9 +13,11 @@ const HAS_COST = 'total_labor_cost.gt.0,total_parts_cost.gt.0,accrued_parking_fe
 export default async function InvoicesOverview({
   supabase,
   filter,
+  period,
 }: {
   supabase: ServerSupabaseClient;
   filter: InvoiceFilter;
+  period: string;
 }) {
   let listQuery = supabase.from('jobs').select('*').or(HAS_COST).order('created_at', { ascending: false }).limit(200);
   if (filter === 'unpaid') listQuery = listQuery.eq('payment_status', 'UNPAID');
@@ -30,48 +32,40 @@ export default async function InvoicesOverview({
     supabase.from('job_photos').select('id', { count: 'exact', head: true }).eq('tag', 'PARTS_INVOICE'),
   ]);
 
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   let unpaidTotal = 0;
   let unpaidCount = 0;
-  let paidThisMonth = 0;
   for (const j of allPriced ?? []) {
     if (j.payment_status === 'UNPAID') {
       unpaidTotal += jobTotal(j);
       unpaidCount += 1;
-    } else if (j.paid_at && new Date(j.paid_at) >= monthStart) {
-      paidThisMonth += jobTotal(j);
     }
   }
 
   const jobs = listed ?? [];
   const { vehicles, clients } = await loadJobOwners(supabase, jobs);
+  const href = (pay: InvoiceFilter) => `/dashboard/analytics?period=${period}&pay=${pay}`;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-300">Neplaćeno ({unpaidCount})</p>
-          <p className="mt-1 text-lg font-black text-amber-600 dark:text-amber-400">{formatEuroHR(unpaidTotal)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-300">Naplaćeno ovaj mjesec</p>
-          <p className="mt-1 text-lg font-black text-emerald-600 dark:text-emerald-400">{formatEuroHR(paidThisMonth)}</p>
-        </Card>
-      </div>
+      {/* Outstanding money is all-time on purpose — a debt doesn't expire with the period filter. */}
+      <Card className="flex items-center justify-between p-4">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Neplaćeno ukupno ({unpaidCount})</p>
+        <p className="text-lg font-black text-amber-600 dark:text-amber-400">{formatEuroHR(unpaidTotal)}</p>
+      </Card>
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
-            <Receipt className="h-4 w-4" strokeWidth={2} /> Računi (nalozi)
+            <Receipt className="h-4 w-4" strokeWidth={2} /> Računi
           </h2>
           <div className="flex gap-1.5">
-            <FilterPill href="/dashboard/analytics?pay=unpaid" active={filter === 'unpaid'}>
+            <FilterPill href={href('unpaid')} active={filter === 'unpaid'}>
               Neplaćeno
             </FilterPill>
-            <FilterPill href="/dashboard/analytics?pay=paid" active={filter === 'paid'}>
+            <FilterPill href={href('paid')} active={filter === 'paid'}>
               Plaćeno
             </FilterPill>
-            <FilterPill href="/dashboard/analytics?pay=all" active={filter === 'all'}>
+            <FilterPill href={href('all')} active={filter === 'all'}>
               Sve
             </FilterPill>
           </div>
