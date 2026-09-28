@@ -2,16 +2,17 @@ import { requireOwner } from '@/lib/session';
 import { createAdminClient } from '@/lib/supabase/admin';
 import TenantSettingsForm from '@/components/dashboard/TenantSettingsForm';
 import StaffManager, { type StaffMember } from '@/components/dashboard/StaffManager';
-import DemoResetButton from '@/components/dashboard/DemoResetButton';
+import DemoDataPanel from '@/components/dashboard/DemoDataPanel';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireOwner();
 
-  const [{ data: tenant }, { data: profiles }] = await Promise.all([
+  const [{ data: tenant }, { data: profiles }, { count: demoClientCount }] = await Promise.all([
     supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle(),
     supabase.from('profiles').select('*').eq('tenant_id', profile.tenant_id).order('created_at'),
+    supabase.from('clients').select('id', { count: 'exact', head: true }).eq('is_demo', true),
   ]);
   // Suspended workshop — the layout already shows the lock screen.
   if (!tenant) return null;
@@ -31,7 +32,7 @@ export default async function SettingsPage() {
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Postavke radionice</h1>
       <TenantSettingsForm tenant={tenant} />
       <StaffManager initialStaff={staff} currentUserId={user.id} />
-      <DemoResetButton />
+      <DemoDataPanel demoClientCount={demoClientCount ?? 0} />
     </div>
   );
 }

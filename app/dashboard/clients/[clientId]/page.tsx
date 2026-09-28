@@ -39,7 +39,7 @@ export default async function ClientPage({ params }: PageProps) {
         <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Mušterije
       </Link>
 
-      <ClientDetailsCard client={client} />
+      <ClientDetailsCard client={client} canDelete={profile.role === 'owner'} jobCount={jobList.length} />
 
       <section className="space-y-2">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Vozila ({vehicleList.length})</h2>

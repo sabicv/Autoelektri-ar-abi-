@@ -2,6 +2,7 @@ import { getSessionProfile } from '@/lib/session';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import TenantSuspendedScreen from '@/components/dashboard/TenantSuspendedScreen';
 import TenantWatermark from '@/components/dashboard/TenantWatermark';
+import SessionGuard from '@/components/dashboard/SessionGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // background but below everything else.
   return (
     <div className="isolate min-h-dvh bg-slate-50 dark:bg-workshop-dark">
+      <SessionGuard userId={profile.id} />
       <TenantWatermark logoUrl={tenant.logo_url} />
       <DashboardNav tenantName={tenant.name} logoUrl={tenant.logo_url} role={profile.role} />
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>

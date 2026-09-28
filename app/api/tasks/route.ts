@@ -55,7 +55,14 @@ export async function POST(request: Request) {
 
   if (error || !task) {
     console.error('Task insert failed', error);
-    return NextResponse.json({ error: 'Slanje nije uspjelo.' }, { status: error?.code === '42501' ? 403 : 500 });
+    // 42501 = RLS said no: usually a tab still showing another account
+    // after someone else signed in on the same phone.
+    return error?.code === '42501'
+      ? NextResponse.json(
+          { error: 'Ova poruka se ne može poslati s trenutnom prijavom. Osvježite stranicu.' },
+          { status: 403 }
+        )
+      : NextResponse.json({ error: 'Slanje nije uspjelo.' }, { status: 500 });
   }
 
   // Short vehicle label so the notification alone says which car it's about.
@@ -70,6 +77,7 @@ export async function POST(request: Request) {
   const url = task.job_id ? `/dashboard/jobs/${task.job_id}?poruke=1` : '/dashboard/jobs';
   const senderName = profile.full_name ?? 'Djelatnik';
 
+  const isReply = task.reply_to_id !== null;
   if (task.kind === 'HELP') {
     const { data: owners } = await createAdminClient()
       .from('profiles')
@@ -78,11 +86,15 @@ export async function POST(request: Request) {
       .eq('role', 'owner');
     await sendPushToProfiles(
       (owners ?? []).map((o) => o.id),
-      { title: `Trebam pomoć — ${senderName}`, body: `${vehicleText}${task.message_text}`, url }
+      {
+        title: isReply ? `Odgovor — ${senderName}` : `Trebam pomoć — ${senderName}`,
+        body: `${vehicleText}${task.message_text}`,
+        url,
+      }
     );
   } else if (task.receiver_id) {
     await sendPushToProfiles([task.receiver_id], {
-      title: `Novi zadatak od ${senderName}`,
+      title: isReply ? `Odgovor — ${senderName}` : `Novi zadatak od ${senderName}`,
       body: `${vehicleText}${task.message_text}`,
       url,
     });

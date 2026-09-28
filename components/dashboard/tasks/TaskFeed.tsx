@@ -14,6 +14,7 @@ import type { MechanicTask, StaffRole, TaskStatus } from '@/types/database';
 import type { StaffOption } from './TaskComposer';
 
 const TaskComposer = dynamic(() => import('./TaskComposer'), { ssr: false });
+const HelpRequestSheet = dynamic(() => import('./HelpRequestSheet'), { ssr: false });
 
 const TASK_STATUS_HR: Record<TaskStatus, string> = { PENDING: 'Novo', IN_PROGRESS: 'Preuzeto', DONE: 'Gotovo' };
 const HELP_STATUS_HR: Record<TaskStatus, string> = { PENDING: 'Čeka odgovor', IN_PROGRESS: 'U tijeku', DONE: 'Riješeno' };
@@ -40,6 +41,8 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
   const isOwner = role === 'owner';
   const [tasks, setTasks] = useState(initialTasks);
   const [composer, setComposer] = useState<{ replyTo?: MechanicTask } | null>(null);
+  // A mechanic answering the owner's task (goes out through HelpRequestSheet).
+  const [answering, setAnswering] = useState<MechanicTask | null>(null);
   const staffNames = useMemo(() => new Map(staff.map((s) => [s.id, s.name])), [staff]);
   const receivers = useMemo(() => staff.filter((s) => s.id !== currentUserId), [staff, currentUserId]);
   // Realtime UPDATEs carry only the new row; the previous status comes from here.
@@ -63,7 +66,9 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
       const addressedToMe = task.receiver_id === currentUserId || (isOwner && task.kind === 'HELP' && task.sender_id !== currentUserId);
       if (payload.eventType === 'INSERT' && addressedToMe) {
         navigator.vibrate?.([200, 100, 200]);
-        toast(task.kind === 'HELP' ? 'Trebam pomoć' : 'Novi zadatak', { description: task.message_text });
+        toast(task.reply_to_id ? 'Odgovor' : task.kind === 'HELP' ? 'Trebam pomoć' : 'Novi zadatak', {
+          description: task.message_text,
+        });
       }
 
       // The sender hears back when the other side moves their message along.
@@ -171,6 +176,11 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
           {visible.map((task) => {
             const done = task.status === 'DONE';
             const isHelp = task.kind === 'HELP';
+            // A mechanic's answer travels as HELP but isn't a call for help.
+            const isAnswer = isHelp && task.reply_to_id !== null;
+            // The conversation can always go on, also after it was resolved.
+            const ownerCanReply = isOwner && isHelp && task.sender_id !== currentUserId;
+            const mechanicCanReply = !isOwner && !isHelp && task.receiver_id === currentUserId && task.job_id !== null;
             const sender = task.sender_id ? staffNames.get(task.sender_id) : null;
             const receiver = task.receiver_id ? staffNames.get(task.receiver_id) : null;
             // Whoever else is involved: the sender for what came to me, the
@@ -187,17 +197,25 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
                   'rounded-xl border p-3',
                   done
                     ? 'border-slate-200 opacity-60 dark:border-workshop-border'
-                    : isHelp
-                      ? 'border-red-300 bg-red-50/60 dark:border-red-500/40 dark:bg-red-500/10'
-                      : task.status === 'IN_PROGRESS'
-                        ? 'border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/10'
-                        : 'border-slate-200 dark:border-workshop-border'
+                    : isAnswer
+                      ? 'border-blue-200 bg-blue-50/50 dark:border-electric-blue/40 dark:bg-electric-blue/10'
+                      : isHelp
+                        ? 'border-red-300 bg-red-50/60 dark:border-red-500/40 dark:bg-red-500/10'
+                        : task.status === 'IN_PROGRESS'
+                          ? 'border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/10'
+                          : 'border-slate-200 dark:border-workshop-border'
                 )}
               >
-                {isHelp && (
-                  <p className="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
-                    <LifeBuoy className="h-3.5 w-3.5" strokeWidth={2.5} /> Trebam pomoć
+                {isAnswer ? (
+                  <p className="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-electric-blue">
+                    <Reply className="h-3.5 w-3.5" strokeWidth={2.5} /> Odgovor
                   </p>
+                ) : (
+                  isHelp && (
+                    <p className="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
+                      <LifeBuoy className="h-3.5 w-3.5" strokeWidth={2.5} /> Trebam pomoć
+                    </p>
+                  )
                 )}
                 <div className="flex items-start gap-3">
                   {photoUrl && (
@@ -244,8 +262,8 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
                   )}
                 </div>
 
-                {isHelp && isOwner && !done && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                {ownerCanReply && (
+                  <div className={cn('mt-2 grid gap-2', !done && 'grid-cols-2')}>
                     <button
                       type="button"
                       onClick={() => setComposer({ replyTo: task })}
@@ -253,35 +271,50 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
                     >
                       <Reply className="h-4 w-4" strokeWidth={2} /> Odgovori
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatus(task, 'DONE')}
-                      className="press-effect flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 text-sm font-semibold text-slate-700 dark:border-workshop-border dark:text-slate-200"
-                    >
-                      <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> Riješeno
-                    </button>
+                    {!done && (
+                      <button
+                        type="button"
+                        onClick={() => setStatus(task, 'DONE')}
+                        className="press-effect flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 text-sm font-semibold text-slate-700 dark:border-workshop-border dark:text-slate-200"
+                      >
+                        <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> {isAnswer ? 'Pročitano' : 'Riješeno'}
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {!isHelp && canAct && (
-                  <button
-                    type="button"
-                    onClick={() => setStatus(task, task.status === 'PENDING' ? 'IN_PROGRESS' : 'DONE')}
-                    className={cn(
-                      'press-effect mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white',
-                      task.status === 'PENDING' ? 'bg-blue-600 dark:bg-electric-blue dark:text-workshop-dark' : 'bg-emerald-600'
+                {(canAct || mechanicCanReply) && !isHelp && (
+                  <div className={cn('mt-2 grid gap-2', canAct && mechanicCanReply && 'grid-cols-2')}>
+                    {canAct && (
+                      <button
+                        type="button"
+                        onClick={() => setStatus(task, task.status === 'PENDING' ? 'IN_PROGRESS' : 'DONE')}
+                        className={cn(
+                          'press-effect flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white',
+                          task.status === 'PENDING' ? 'bg-blue-600 dark:bg-electric-blue dark:text-workshop-dark' : 'bg-emerald-600'
+                        )}
+                      >
+                        {task.status === 'PENDING' ? (
+                          <>
+                            <Hand className="h-4 w-4" strokeWidth={2} /> Preuzmi
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> Gotovo
+                          </>
+                        )}
+                      </button>
                     )}
-                  >
-                    {task.status === 'PENDING' ? (
-                      <>
-                        <Hand className="h-4 w-4" strokeWidth={2} /> Preuzmi
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> Gotovo
-                      </>
+                    {mechanicCanReply && (
+                      <button
+                        type="button"
+                        onClick={() => setAnswering(task)}
+                        className="press-effect flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 text-sm font-semibold text-slate-700 dark:border-workshop-border dark:text-slate-200"
+                      >
+                        <Reply className="h-4 w-4" strokeWidth={2} /> Odgovori
+                      </button>
                     )}
-                  </button>
+                  </div>
                 )}
               </li>
             );
@@ -303,9 +336,20 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
           }
           onSent={(task) => {
             setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev : [task, ...prev]));
-            // Replying to a help request resolves it.
-            if (composer.replyTo) setStatus(composer.replyTo, 'DONE');
+            // Replying to an open help request resolves it.
+            if (composer.replyTo && composer.replyTo.status !== 'DONE') setStatus(composer.replyTo, 'DONE');
           }}
+        />
+      )}
+
+      {answering?.job_id && (
+        <HelpRequestSheet
+          open
+          onClose={() => setAnswering(null)}
+          tenantId={tenantId}
+          jobId={answering.job_id}
+          replyToId={answering.id}
+          onSent={(task) => setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev : [task, ...prev]))}
         />
       )}
     </Card>

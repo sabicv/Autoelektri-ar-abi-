@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -133,6 +133,35 @@ export default function JobDetailView({
   const isDiagnosticPhase = DIAGNOSTIC_PHASE_STATUSES.includes(currentJob.status);
 
   const symptomSummary = currentJob.symptoms.map((code) => SYMPTOM_LABELS.get(code) ?? code).join(', ');
+
+  // Messages on this job arrive live, so a reply shows up without reloading.
+  // RLS applies to the stream: a mechanic only receives their own thread.
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    const channel = supabase
+      .channel(`job-messages-${job.id}`)
+      .on(
+        'postgres_changes' as never,
+        { event: '*', schema: 'public', table: 'mechanic_tasks', filter: `job_id=eq.${job.id}` },
+        ((payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: MechanicTask }) => {
+          if (payload.eventType === 'DELETE') return;
+          const task = payload.new;
+          setMessages((prev) =>
+            prev.some((m) => m.id === task.id) ? prev.map((m) => (m.id === task.id ? task : m)) : [...prev, task]
+          );
+          if (payload.eventType === 'INSERT' && task.sender_id !== currentUserId) {
+            navigator.vibrate?.(150);
+            toast(task.kind === 'HELP' && !task.reply_to_id ? 'Trebam pomoć' : 'Nova poruka', {
+              description: task.message_text,
+            });
+          }
+        }) as never
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [job.id, currentUserId]);
 
   async function changeStatus(newStatus: JobStatus) {
     if (newStatus === currentJob.status) {

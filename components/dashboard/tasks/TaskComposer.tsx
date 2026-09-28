@@ -85,6 +85,7 @@ export default function TaskComposer({
 
     setIsSending(true);
     let data: MechanicTask | null = null;
+    let serverError: string | null = null;
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
@@ -99,13 +100,14 @@ export default function TaskComposer({
       });
       const json = await response.json();
       if (response.ok) data = json.task;
+      else if (response.status === 403) serverError = json.error;
     } catch {
       // handled below
     }
     setIsSending(false);
 
     if (!data) {
-      toast.error('Slanje zadatka nije uspjelo. Tekst je sačuvan — pokušajte ponovno.');
+      toast.error(serverError ?? 'Slanje nije uspjelo. Tekst je sačuvan — pokušajte ponovno.');
       return;
     }
 

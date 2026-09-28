@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Camera, LifeBuoy, Loader2, Mic, MicOff, RotateCcw } from 'lucide-react';
+import { Camera, LifeBuoy, Loader2, Mic, MicOff, Reply, RotateCcw, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -15,10 +15,14 @@ interface HelpRequestSheetProps {
   onClose: () => void;
   tenantId: string;
   jobId: string;
+  // Set when a mechanic answers the owner: same channel to management,
+  // but shown as "Odgovor", not as a red "Trebam pomoć".
+  replyToId?: string;
   onSent?: (task: MechanicTask) => void;
 }
 
-export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSent }: HelpRequestSheetProps) {
+export default function HelpRequestSheet({ open, onClose, tenantId, jobId, replyToId, onSent }: HelpRequestSheetProps) {
+  const isReply = Boolean(replyToId);
   const inputRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<{ path: string; previewUrl: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,7 +66,7 @@ export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSen
 
   async function send() {
     if (!photo && !message.trim()) {
-      toast.error('Uslikajte problem ili ga opišite.');
+      toast.error(replyToId ? 'Napišite odgovor.' : 'Uslikajte problem ili ga opišite.');
       return;
     }
     setIsSending(true);
@@ -73,20 +77,21 @@ export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSen
         body: JSON.stringify({
           kind: 'HELP',
           jobId,
-          message: message.trim() || 'Trebam pomoć oko ovog vozila.',
+          replyToId: replyToId ?? null,
+          message: message.trim() || (replyToId ? 'Pogledaj fotografiju.' : 'Trebam pomoć oko ovog vozila.'),
           photoPath: photo?.path ?? null,
         }),
       });
       const json = await response.json();
-      if (!response.ok) throw new Error(json.error);
+      if (!response.ok) throw new Error(response.status === 403 ? json.error : undefined);
       toast.success('Poslano — vlasnik je obaviješten.');
       onSent?.(json.task);
       if (photo) URL.revokeObjectURL(photo.previewUrl);
       setPhoto(null);
       setMessage('');
       onClose();
-    } catch {
-      toast.error('Slanje nije uspjelo. Pokušajte ponovno.');
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || 'Slanje nije uspjelo. Pokušajte ponovno.');
     } finally {
       setIsSending(false);
     }
@@ -95,9 +100,15 @@ export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSen
   return (
     <Drawer open={open} onOpenChange={(next) => !next && close()}>
       <DrawerContent className="max-h-[95dvh]">
-        <DrawerTitle className="flex items-center gap-2 px-4 pt-4 text-base font-bold text-red-600 dark:text-red-400">
-          <LifeBuoy className="h-5 w-5" strokeWidth={2} /> Trebam pomoć
-        </DrawerTitle>
+        {isReply ? (
+          <DrawerTitle className="flex items-center gap-2 px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
+            <Reply className="h-5 w-5" strokeWidth={2} /> Odgovor vlasniku
+          </DrawerTitle>
+        ) : (
+          <DrawerTitle className="flex items-center gap-2 px-4 pt-4 text-base font-bold text-red-600 dark:text-red-400">
+            <LifeBuoy className="h-5 w-5" strokeWidth={2} /> Trebam pomoć
+          </DrawerTitle>
+        )}
 
         <div className="space-y-4 overflow-y-auto px-4 py-4">
           {photo ? (
@@ -117,10 +128,19 @@ export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSen
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={isUploading}
-              className="press-effect flex min-h-[128px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-red-300 bg-red-50/60 text-base font-semibold text-red-700 disabled:opacity-60 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+              className={cn(
+                'press-effect flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-base font-semibold disabled:opacity-60',
+                isReply
+                  ? 'min-h-[56px] border-slate-300 text-slate-600 dark:border-workshop-border dark:text-slate-300'
+                  : 'min-h-[128px] flex-col border-red-300 bg-red-50/60 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
+              )}
             >
-              {isUploading ? <Loader2 className="h-8 w-8 animate-spin" /> : <Camera className="h-8 w-8" strokeWidth={2} />}
-              Uslikaj problem
+              {isUploading ? (
+                <Loader2 className={isReply ? 'h-5 w-5 animate-spin' : 'h-8 w-8 animate-spin'} />
+              ) : (
+                <Camera className={isReply ? 'h-5 w-5' : 'h-8 w-8'} strokeWidth={2} />
+              )}
+              {isReply ? 'Dodaj fotografiju' : 'Uslikaj problem'}
             </button>
           )}
           <input
@@ -162,9 +182,18 @@ export default function HelpRequestSheet({ open, onClose, tenantId, jobId, onSen
             type="button"
             onClick={send}
             disabled={isSending || isUploading}
-            className="press-effect flex min-h-[56px] w-full items-center justify-center gap-2 rounded-xl bg-alarm-red text-base font-semibold text-white disabled:opacity-60"
+            className={cn(
+              'press-effect flex min-h-[56px] w-full items-center justify-center gap-2 rounded-xl text-base font-semibold text-white disabled:opacity-60',
+              isReply ? 'bg-blue-600 dark:bg-electric-blue dark:text-workshop-dark' : 'bg-alarm-red'
+            )}
           >
-            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <LifeBuoy className="h-5 w-5" strokeWidth={2} />}
+            {isSending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isReply ? (
+              <Send className="h-5 w-5" strokeWidth={2} />
+            ) : (
+              <LifeBuoy className="h-5 w-5" strokeWidth={2} />
+            )}
             Pošalji vlasniku
           </button>
         </div>

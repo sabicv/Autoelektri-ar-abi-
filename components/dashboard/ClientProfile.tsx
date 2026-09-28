@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Car, History, Loader2, Pencil, Phone, User } from 'lucide-react';
+import { Car, History, Loader2, Pencil, Phone, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -64,13 +64,49 @@ function clientValues(client: Client): ClientEditValues {
   };
 }
 
-export function ClientDetailsCard({ client: initialClient }: { client: Client }) {
+export function ClientDetailsCard({
+  client: initialClient,
+  canDelete,
+  jobCount,
+}: {
+  client: Client;
+  canDelete: boolean;
+  jobCount: number;
+}) {
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState<ClientEditValues>(() => clientValues(initialClient));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!deleteArmed) return;
+    const timer = setTimeout(() => setDeleteArmed(false), 4000);
+    return () => clearTimeout(timer);
+  }, [deleteArmed]);
+
+  // Irreversible (vehicles, jobs, photos, messages all go), so a second
+  // tap within a few seconds confirms it.
+  async function deleteClient() {
+    if (!deleteArmed) {
+      setDeleteArmed(true);
+      return;
+    }
+    setDeleting(true);
+    const response = await fetch(`/api/clients/${client.id}`, { method: 'DELETE' });
+    setDeleting(false);
+    setDeleteArmed(false);
+    if (!response.ok) {
+      toast.error('Brisanje nije uspjelo.');
+      return;
+    }
+    toast.success('Mušterija je obrisana.');
+    router.replace('/dashboard/clients');
+    router.refresh();
+  }
 
   const set = (key: keyof ClientEditValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setValues((prev) => ({ ...prev, [key]: e.target.value }));
@@ -141,6 +177,24 @@ export function ClientDetailsCard({ client: initialClient }: { client: Client })
           <Field label="Napomena" value={values.notes} onChange={set('notes')} autoComplete="off" />
           <EditActions saving={saving} error={error} onCancel={() => setEditing(false)} />
         </form>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={deleteClient}
+            disabled={deleting}
+            className={cn(
+              'press-effect mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border-2 text-sm font-semibold disabled:opacity-60',
+              deleteArmed
+                ? 'border-red-600 bg-red-600 text-white'
+                : 'border-red-300 text-red-700 dark:border-red-500/50 dark:text-red-400'
+            )}
+          >
+            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" strokeWidth={2} />}
+            {deleteArmed
+              ? 'Dodirni ponovno za trajno brisanje'
+              : `Obriši mušteriju${jobCount > 0 ? ` i ${jobCount} ${jobCount === 1 ? 'nalog' : 'naloga'}` : ''}`}
+          </button>
+        )}
       </Card>
     );
   }

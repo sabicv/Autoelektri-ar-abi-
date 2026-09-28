@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Loader2, LogIn, Zap } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { announceAuthChange } from '@/lib/authSync';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginPage() {
       return;
     }
 
+    announceAuthChange();
     router.push('/dashboard/jobs');
     router.refresh();
   }

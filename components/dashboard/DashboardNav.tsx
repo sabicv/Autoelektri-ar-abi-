@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { announceAuthChange } from '@/lib/authSync';
 import { enablePush, isPushEnabled, pushSupported } from '@/lib/pushClient';
 import { canPromptInstall, INSTALL_READY_EVENT, isIOS, isStandalone, promptInstall, syncThemeColor } from '@/lib/pwa';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
@@ -151,6 +152,7 @@ export default function DashboardNav({
   async function handleLogout() {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
+    announceAuthChange();
     router.push('/login');
     router.refresh();
   }

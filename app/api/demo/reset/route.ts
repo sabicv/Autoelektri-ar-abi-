@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DEMO_CLIENTS, type DemoJobSeed } from '@/lib/demo-seed';
 import { JOB_STATUS_LABELS_HR } from '@/lib/format';
+import { purgeClients } from '@/lib/purgeClients';
 
 // =====================================================================
 // Wipes and re-seeds this tenant's curated sales-demo dataset so a
@@ -40,9 +41,11 @@ export async function POST() {
   const tenantId = profile.tenant_id;
   const now = Date.now();
 
-  // Cascades to vehicles / jobs / diagnostic_reports / job_photos / job_events.
-  const { error: deleteError } = await admin.from('clients').delete().eq('tenant_id', tenantId).eq('is_demo', true);
-  if (deleteError) {
+  // Old demo rows go with their messages and stored files, not just the cascade.
+  const { data: oldDemo } = await admin.from('clients').select('id').eq('tenant_id', tenantId).eq('is_demo', true);
+  try {
+    await purgeClients(admin, tenantId, (oldDemo ?? []).map((c) => c.id));
+  } catch (deleteError) {
     console.error('Demo reset: delete failed', deleteError);
     return NextResponse.json({ error: 'Brisanje starih demo podataka nije uspjelo.' }, { status: 500 });
   }
