@@ -80,8 +80,8 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
             return (
               <Card key={client.id} className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-electric-blue/10">
-                    <User className="h-5 w-5 text-blue-600 dark:text-electric-blue" strokeWidth={2} />
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-workshop-surface-hover">
+                    <User className="h-5 w-5 text-slate-500 dark:text-slate-300" strokeWidth={2} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">

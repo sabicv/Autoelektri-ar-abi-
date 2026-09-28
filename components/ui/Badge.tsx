@@ -9,9 +9,10 @@ interface BadgeProps {
   children: React.ReactNode;
 }
 
-// Status colors are semantic and fixed by design spec, not arbitrary:
-// emerald = paid/collected, amber = testing/in progress, crimson = parking
-// alarm/urgent, electric blue = diagnostic.
+// Colour is a signal, never decoration (see JOB_STATUS_BADGE_VARIANT):
+// blue ("diagnostic") = being worked on, amber ("progress") = waiting on
+// parts or payment, emerald ("collected") = ready/paid, neutral = new or
+// closed, red = HITNO and help requests only.
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   collected: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400',
   progress: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',

@@ -63,6 +63,7 @@ const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'IN_DIAGNOSTIC',
   'PARASITIC_DRAIN_TESTING',
   'IN_REPAIR',
+  'WAITING_PARTS',
   'FINISHED_AWAITING_PICKUP',
   'COLLECTED',
 ];
@@ -228,7 +229,7 @@ export default function JobDetailView({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-3 pb-10">
+    <div className="mx-auto max-w-2xl space-y-4 pb-10">
       <Link
         href="/dashboard/jobs"
         className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"

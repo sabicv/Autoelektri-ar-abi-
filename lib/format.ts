@@ -15,6 +15,7 @@ export const JOB_STATUS_LABELS_HR: Record<JobStatus, string> = {
   PARASITIC_DRAIN_TESTING: 'Test pražnjenja / moduli',
   AWAITING_MODULE_REMAP: 'Test pražnjenja / moduli',
   IN_REPAIR: 'Rad u tijeku',
+  WAITING_PARTS: 'Čeka dijelove',
   FINISHED_AWAITING_PICKUP: 'Gotovo / spremno',
   COLLECTED: 'Preuzeto',
 };

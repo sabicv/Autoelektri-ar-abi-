@@ -788,3 +788,11 @@ create policy "push_subscriptions_own" on public.push_subscriptions
   to authenticated
   using (profile_id = auth.uid() and tenant_id = public.auth_tenant_id())
   with check (profile_id = auth.uid() and tenant_id = public.auth_tenant_id());
+
+-- ---------------------------------------------------------------------
+-- 19. "Čeka dijelove" status
+-- ---------------------------------------------------------------------
+
+-- A job parked until an ordered part arrives — the most common wait in an
+-- auto-electrician's day, previously indistinguishable from active work.
+alter type public.job_status add value if not exists 'WAITING_PARTS' after 'IN_REPAIR';

@@ -47,13 +47,11 @@ export function JobList({
             ]
               .filter(Boolean)
               .join(' · ')}
+            aside={total > 0 ? formatEuroHR(total) : undefined}
             meta={
               <>
                 <Badge variant={JOB_STATUS_BADGE_VARIANT[job.status]}>{JOB_STATUS_LABELS_HR[job.status]}</Badge>
                 {total > 0 && <PaymentChip status={job.payment_status} />}
-                {total > 0 && (
-                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{formatEuroHR(total)}</span>
-                )}
               </>
             }
           />

@@ -11,16 +11,15 @@ import type { Client, Job, Vehicle } from '@/types/database';
 
 const NewJobModal = dynamic(() => import('./NewJobModal'), { ssr: false });
 
-type Filter = 'ACTIVE' | 'DIAGNOSTIC' | 'READY' | 'COLLECTED';
+type Filter = 'ACTIVE' | 'WAITING' | 'READY' | 'COLLECTED';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'ACTIVE', label: 'Aktivno' },
-  { key: 'DIAGNOSTIC', label: 'Dijagnostika' },
+  { key: 'WAITING', label: 'Čeka dijelove' },
   { key: 'READY', label: 'Spremno' },
   { key: 'COLLECTED', label: 'Preuzeto' },
 ];
 
-const DIAGNOSTIC_STATUSES: Job['status'][] = ['IN_DIAGNOSTIC', 'PARASITIC_DRAIN_TESTING', 'AWAITING_MODULE_REMAP'];
 
 interface JobsBoardProps {
   jobs: Job[];
@@ -51,8 +50,8 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
       switch (filter) {
         case 'ACTIVE':
           return j.status !== 'COLLECTED';
-        case 'DIAGNOSTIC':
-          return DIAGNOSTIC_STATUSES.includes(j.status);
+        case 'WAITING':
+          return j.status === 'WAITING_PARTS';
         case 'READY':
           return j.status === 'FINISHED_AWAITING_PICKUP';
         case 'COLLECTED':
@@ -80,7 +79,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
   }, [jobList, filter, searchQuery, clientMap, vehicleMap]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <button
         type="button"
         onClick={() => setNewJobOpen(true)}
@@ -106,7 +105,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
             type="button"
             onClick={() => setFilter(f.key)}
             className={cn(
-              'press-effect min-h-[48px] flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors',
+              'press-effect min-h-[48px] flex-1 rounded-lg px-1 text-center text-sm font-semibold leading-tight transition-colors',
               filter === f.key
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-workshop-surface-hover dark:text-slate-100'
                 : 'text-slate-500 dark:text-slate-300'
@@ -123,7 +122,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
           <p className="text-sm">Nema poslova koji odgovaraju pretrazi.</p>
         </div>
       ) : (
-        <motion.div layout className="space-y-3">
+        <motion.div layout className="space-y-4">
           <AnimatePresence initial={false}>
             {filteredJobs.map((job) => {
               const client = clientMap.get(job.client_id);

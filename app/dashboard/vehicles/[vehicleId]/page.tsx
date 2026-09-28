@@ -91,8 +91,8 @@ export default async function VehiclePassportPage({ params }: PageProps) {
 
       <Card className="p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-electric-blue/10">
-            <Car className="h-7 w-7 text-blue-600 dark:text-electric-blue" strokeWidth={2} />
+          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-workshop-surface-hover">
+            <Car className="h-7 w-7 text-slate-500 dark:text-slate-300" strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{vehicleLabel(vehicle)}</h1>

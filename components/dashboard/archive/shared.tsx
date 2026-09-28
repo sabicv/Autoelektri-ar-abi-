@@ -9,17 +9,19 @@ export function ArchiveRow({
   title,
   subtitle,
   meta,
+  aside,
 }: {
   href: string;
   icon: React.ReactNode;
   title: string;
   subtitle?: string | null;
   meta?: React.ReactNode;
+  aside?: React.ReactNode;
 }) {
   return (
     <Link href={href}>
       <Card hoverLift className="flex items-center gap-3 p-3.5">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-workshop-surface-hover dark:text-slate-300">
           {icon}
         </div>
         {/* Meta sits under the title, not beside it — side-by-side squeezed the title to nothing on phones. */}
@@ -28,6 +30,7 @@ export function ArchiveRow({
           {subtitle && <p className="truncate text-xs text-slate-500 dark:text-slate-300">{subtitle}</p>}
           {meta && <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{meta}</div>}
         </div>
+        {aside && <div className="flex-shrink-0 self-start text-right text-sm font-bold tabular-nums text-slate-900 dark:text-slate-100">{aside}</div>}
         <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
       </Card>
     </Link>

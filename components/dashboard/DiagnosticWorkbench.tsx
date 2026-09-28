@@ -213,7 +213,7 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
                 type="button"
                 onClick={() => removeCode(code)}
                 aria-label={`Ukloni ${code}`}
-                className="press-effect flex min-h-[48px] items-center gap-1.5 rounded-full bg-electric-blue/10 px-4 text-sm font-bold text-electric-blue hover:bg-electric-blue/20"
+                className="press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg bg-slate-100 px-4 font-mono text-sm font-bold text-slate-800 hover:bg-slate-200 dark:bg-workshop-surface-hover dark:text-slate-100"
               >
                 {code}
                 <X className="h-4 w-4" strokeWidth={2.5} />

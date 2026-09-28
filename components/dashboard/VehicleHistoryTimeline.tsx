@@ -98,7 +98,7 @@ export default function VehicleHistoryTimeline({
                 {codes.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {codes.map((code) => (
-                      <span key={code} className="rounded-full bg-electric-blue/10 px-2.5 py-1 text-xs font-bold text-electric-blue">
+                      <span key={code} className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-slate-800 dark:bg-workshop-surface-hover dark:text-slate-100">
                         {code}
                       </span>
                     ))}
