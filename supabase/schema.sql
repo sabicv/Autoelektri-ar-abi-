@@ -616,3 +616,87 @@ create trigger trg_enforce_owner_only_job_fields
   before update on public.jobs
   for each row
   execute function public.enforce_owner_only_job_fields();
+
+-- ---------------------------------------------------------------------
+-- 16. Workshop tasks: owner dictates, a mechanic receives it live
+-- ---------------------------------------------------------------------
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'task_status') then
+    create type public.task_status as enum ('PENDING', 'IN_PROGRESS', 'DONE');
+  end if;
+end $$;
+
+create table if not exists public.mechanic_tasks (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references public.tenants (id) on delete cascade,
+  sender_id    uuid references public.profiles (id) on delete set null,
+  receiver_id  uuid not null references public.profiles (id) on delete cascade,
+  job_id       uuid references public.jobs (id) on delete set null,
+  message_text text not null check (length(btrim(message_text)) > 0),
+  status       public.task_status not null default 'PENDING',
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists idx_mechanic_tasks_receiver on public.mechanic_tasks (receiver_id, status);
+create index if not exists idx_mechanic_tasks_tenant on public.mechanic_tasks (tenant_id, created_at desc);
+
+alter table public.mechanic_tasks enable row level security;
+
+-- A mechanic may only move a task along (status), never rewrite or reassign it.
+grant select, insert, delete on public.mechanic_tasks to authenticated;
+revoke update on public.mechanic_tasks from authenticated;
+grant update (status, updated_at) on public.mechanic_tasks to authenticated;
+
+-- Colleagues' names, so a mechanic can see who a task came from. profiles
+-- holds nothing sensitive (name, role, tenant).
+drop policy if exists "profiles_select_tenant" on public.profiles;
+create policy "profiles_select_tenant" on public.profiles
+  for select
+  to authenticated
+  using (tenant_id = public.auth_tenant_id());
+
+drop policy if exists "mechanic_tasks_select" on public.mechanic_tasks;
+create policy "mechanic_tasks_select" on public.mechanic_tasks
+  for select
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and (receiver_id = auth.uid() or public.auth_role() = 'owner'));
+
+drop policy if exists "mechanic_tasks_insert_owner" on public.mechanic_tasks;
+create policy "mechanic_tasks_insert_owner" on public.mechanic_tasks
+  for insert
+  to authenticated
+  with check (
+    tenant_id = public.auth_tenant_id()
+    and public.auth_role() = 'owner'
+    and sender_id = auth.uid()
+    and exists (select 1 from public.profiles p where p.id = receiver_id and p.tenant_id = mechanic_tasks.tenant_id)
+    and (job_id is null or exists (select 1 from public.jobs j where j.id = job_id and j.tenant_id = mechanic_tasks.tenant_id))
+  );
+
+drop policy if exists "mechanic_tasks_update" on public.mechanic_tasks;
+create policy "mechanic_tasks_update" on public.mechanic_tasks
+  for update
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and (receiver_id = auth.uid() or public.auth_role() = 'owner'))
+  with check (tenant_id = public.auth_tenant_id() and (receiver_id = auth.uid() or public.auth_role() = 'owner'));
+
+drop policy if exists "mechanic_tasks_delete_owner" on public.mechanic_tasks;
+create policy "mechanic_tasks_delete_owner" on public.mechanic_tasks
+  for delete
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and public.auth_role() = 'owner');
+
+-- Live delivery. Supabase Realtime applies the select policy above per
+-- subscriber, so a mechanic's socket only ever receives their own tasks.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'mechanic_tasks'
+  ) then
+    alter publication supabase_realtime add table public.mechanic_tasks;
+  end if;
+end $$;

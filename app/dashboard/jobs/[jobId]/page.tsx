@@ -11,15 +11,16 @@ interface PageProps {
 
 export default async function JobDetailPage({ params }: PageProps) {
   const { jobId } = await params;
-  const { supabase, profile } = await getSessionProfile();
+  const { supabase, user, profile } = await getSessionProfile();
 
   const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).maybeSingle();
   if (!job) notFound();
 
-  const [{ data: client }, { data: vehicle }, { data: events }] = await Promise.all([
+  const [{ data: client }, { data: vehicle }, { data: events }, { data: staff }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', job.client_id).maybeSingle(),
     supabase.from('vehicles').select('*').eq('id', job.vehicle_id).maybeSingle(),
     supabase.from('job_events').select('*').eq('job_id', jobId).order('created_at', { ascending: false }),
+    supabase.from('profiles').select('id, full_name').neq('id', user.id).order('created_at'),
   ]);
 
   if (!client || !vehicle) notFound();
@@ -31,6 +32,8 @@ export default async function JobDetailPage({ params }: PageProps) {
       vehicle={vehicle}
       events={redactEventsForRole(events ?? [], profile.role)}
       viewerRole={profile.role}
+      currentUserId={user.id}
+      staff={(staff ?? []).map((s) => ({ id: s.id, name: s.full_name ?? 'Djelatnik' }))}
     />
   );
 }

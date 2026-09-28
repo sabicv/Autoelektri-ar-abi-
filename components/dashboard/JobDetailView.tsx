@@ -9,6 +9,7 @@ import {
   Boxes,
   Camera,
   Car,
+  ClipboardList,
   ChevronRight,
   Euro,
   History,
@@ -41,6 +42,7 @@ import JobPhotoUploader from './JobPhotoUploader';
 import JobHistoryTimeline from './JobHistoryTimeline';
 import type { NotificationType } from './NotificationDraftModal';
 import type { SectionHandle } from './sectionHandle';
+import type { StaffOption } from './tasks/TaskComposer';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
@@ -51,6 +53,7 @@ import type { Client, Job, JobEvent, JobStatus, JobUpdate, StaffRole, Vehicle } 
 // Opened on demand only — kept out of the job page's initial bundle.
 const NotificationDraftModal = dynamic(() => import('./NotificationDraftModal'), { ssr: false });
 const SmartLockboxModal = dynamic(() => import('./SmartLockboxModal'), { ssr: false });
+const TaskComposer = dynamic(() => import('./tasks/TaskComposer'), { ssr: false });
 
 const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'PENDING_TRIAGE',
@@ -71,9 +74,19 @@ interface JobDetailViewProps {
   vehicle: Vehicle;
   events: JobEvent[];
   viewerRole: StaffRole;
+  currentUserId: string;
+  staff: StaffOption[];
 }
 
-export default function JobDetailView({ job, client, vehicle, events, viewerRole }: JobDetailViewProps) {
+export default function JobDetailView({
+  job,
+  client,
+  vehicle,
+  events,
+  viewerRole,
+  currentUserId,
+  staff,
+}: JobDetailViewProps) {
   const isOwner = viewerRole === 'owner';
   const [currentJob, setCurrentJob] = useState(job);
   const [currentClient, setCurrentClient] = useState(client);
@@ -84,6 +97,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
   const [isConfirming, setIsConfirming] = useState(false);
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
   const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const diagnosticRef = useRef<SectionHandle>(null);
@@ -448,6 +462,19 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
                 Pametni sef (preuzimanje ključeva)
               </button>
             )}
+            {isOwner && staff.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setTaskOpen(true);
+                }}
+                className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+              >
+                <ClipboardList className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+                Zadatak mehaničaru
+              </button>
+            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -469,6 +496,18 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
 
       {lockboxOpen && (
         <SmartLockboxModal open onClose={() => setLockboxOpen(false)} job={{ id: currentJob.id, clientFirstName }} />
+      )}
+
+      {taskOpen && (
+        <TaskComposer
+          open
+          onClose={() => setTaskOpen(false)}
+          tenantId={currentJob.tenant_id}
+          currentUserId={currentUserId}
+          staff={staff}
+          jobId={currentJob.id}
+          jobLabel={vehicleLabel(currentVehicle)}
+        />
       )}
     </div>
   );

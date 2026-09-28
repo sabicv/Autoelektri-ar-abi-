@@ -51,6 +51,8 @@ export type PaymentStatus = 'UNPAID' | 'PAID';
 
 export type ArchiveSearchKind = 'vehicle' | 'job' | 'document';
 
+export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE';
+
 // ---------------------------------------------------------------------
 // Supabase-generated-style Database interface
 // (Row = select shape, Insert = required/optional for insert,
@@ -371,6 +373,33 @@ export interface Database {
           },
         ];
       };
+
+      mechanic_tasks: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          sender_id: string | null;
+          receiver_id: string;
+          job_id: string | null;
+          message_text: string;
+          status: TaskStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          sender_id?: string | null;
+          receiver_id: string;
+          job_id?: string | null;
+          message_text: string;
+          status?: TaskStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['mechanic_tasks']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -429,6 +458,7 @@ export interface Database {
       photo_tag: PhotoTag;
       tenant_status: TenantStatus;
       payment_status: PaymentStatus;
+      task_status: TaskStatus;
     };
     CompositeTypes: Record<string, never>;
   };
@@ -468,6 +498,8 @@ export type JobPhotoUpdate = Database['public']['Tables']['job_photos']['Update'
 export type JobEvent = Database['public']['Tables']['job_events']['Row'];
 export type JobEventInsert = Database['public']['Tables']['job_events']['Insert'];
 export type JobEventUpdate = Database['public']['Tables']['job_events']['Update'];
+
+export type MechanicTask = Database['public']['Tables']['mechanic_tasks']['Row'];
 
 // ---------------------------------------------------------------------
 // Joined relation types (for API responses / server component fetches)
