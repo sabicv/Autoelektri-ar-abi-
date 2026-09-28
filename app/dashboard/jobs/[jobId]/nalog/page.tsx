@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/session';
 import { formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal } from '@/lib/finance';
 import PrintButton from '@/components/dashboard/PrintButton';
+import ArchivePdfButton from '@/components/dashboard/ArchivePdfButton';
 import type { DiagnosticReport } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,10 @@ export default async function WorkOrderPage({ params }: PageProps) {
     <div className="mx-auto max-w-2xl space-y-6 pb-10">
       <div className="flex items-center justify-between print:hidden">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Radni nalog</h1>
-        <PrintButton />
+        <div className="flex gap-2">
+          <PrintButton />
+          {showPrices && <ArchivePdfButton jobId={job.id} />}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-900 print:rounded-none print:border-0 print:p-0 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100 dark:print:bg-white dark:print:text-slate-900">

@@ -796,3 +796,49 @@ create policy "push_subscriptions_own" on public.push_subscriptions
 -- A job parked until an ordered part arrives — the most common wait in an
 -- auto-electrician's day, previously indistinguishable from active work.
 alter type public.job_status add value if not exists 'WAITING_PARTS' after 'IN_REPAIR';
+
+-- ---------------------------------------------------------------------
+-- 20. Archived work-order / invoice PDFs
+-- ---------------------------------------------------------------------
+
+-- Generated server-side and stored with the job, so the paper trail lives
+-- in the app instead of in someone's Downloads folder.
+alter type public.photo_tag add value if not exists 'WORK_ORDER';
+
+-- Those PDFs carry prices, which mechanics don't see. Split the blanket
+-- job_photos policy so reads hide WORK_ORDER rows from non-owners.
+-- (tag::text, not the enum literal: a value added in this same script
+-- can't be referenced as an enum until the script commits.)
+drop policy if exists "job_photos_staff_all" on public.job_photos;
+
+drop policy if exists "job_photos_staff_select" on public.job_photos;
+create policy "job_photos_staff_select" on public.job_photos
+  for select
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and (tag::text <> 'WORK_ORDER' or public.auth_role() = 'owner'));
+
+drop policy if exists "job_photos_staff_insert" on public.job_photos;
+create policy "job_photos_staff_insert" on public.job_photos
+  for insert
+  to authenticated
+  with check (tenant_id = public.auth_tenant_id());
+
+drop policy if exists "job_photos_staff_update" on public.job_photos;
+create policy "job_photos_staff_update" on public.job_photos
+  for update
+  to authenticated
+  using (tenant_id = public.auth_tenant_id())
+  with check (tenant_id = public.auth_tenant_id());
+
+drop policy if exists "job_photos_staff_delete" on public.job_photos;
+create policy "job_photos_staff_delete" on public.job_photos
+  for delete
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and (tag::text <> 'WORK_ORDER' or public.auth_role() = 'owner'));
+
+-- The job-vault bucket only accepted images, so every PDF (uploaded
+-- documents and generated work orders) was rejected. Same change is in
+-- storage.sql for fresh installs.
+update storage.buckets
+set allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']
+where id = 'job-vault';

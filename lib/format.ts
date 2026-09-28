@@ -28,6 +28,7 @@ export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {
   NEW_PARTS: 'Novi dijelovi',
   PARTS_INVOICE: 'Račun za dijelove',
   DOCUMENT: 'Dokument',
+  WORK_ORDER: 'Radni nalog / račun',
 };
 
 // Vocative for a friendly "Bok Ivane". Vowel-ending names (Ana, Luka,

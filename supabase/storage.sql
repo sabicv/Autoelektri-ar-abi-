@@ -18,7 +18,7 @@ values (
   'job-vault',
   false,
   20971520, -- 20 MB per photo
-  array['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']
 )
 on conflict (id) do update
 set

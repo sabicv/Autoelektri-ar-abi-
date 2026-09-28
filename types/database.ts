@@ -33,7 +33,8 @@ export type PhotoTag =
   | 'WIRING_DEFECT'
   | 'NEW_PARTS'
   | 'PARTS_INVOICE'
-  | 'DOCUMENT';
+  | 'DOCUMENT'
+  | 'WORK_ORDER';
 
 export const PHOTO_TAGS: readonly PhotoTag[] = [
   'INTAKE_CONDITION',
@@ -43,6 +44,7 @@ export const PHOTO_TAGS: readonly PhotoTag[] = [
   'NEW_PARTS',
   'PARTS_INVOICE',
   'DOCUMENT',
+  'WORK_ORDER',
 ];
 
 export type StaffRole = 'owner' | 'mechanic';

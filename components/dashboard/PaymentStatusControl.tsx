@@ -5,15 +5,17 @@ import { CheckCircle2, Loader2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PAYMENT_STATUS_LABELS_HR } from '@/lib/format';
+import { archiveWorkOrder } from '@/lib/archiveWorkOrder';
 import { cn } from '@/lib/utils';
 import type { Job } from '@/types/database';
 
 interface PaymentStatusControlProps {
   job: Pick<Job, 'id' | 'tenant_id' | 'payment_status' | 'paid_at'>;
   onChanged: (patch: Pick<Job, 'payment_status' | 'paid_at'>) => void;
+  onArchived?: () => void;
 }
 
-export default function PaymentStatusControl({ job, onChanged }: PaymentStatusControlProps) {
+export default function PaymentStatusControl({ job, onChanged, onArchived }: PaymentStatusControlProps) {
   const [isSaving, setIsSaving] = useState(false);
   const isPaid = job.payment_status === 'PAID';
 
@@ -43,7 +45,14 @@ export default function PaymentStatusControl({ job, onChanged }: PaymentStatusCo
 
     setIsSaving(false);
     onChanged(patch);
-    toast.success(isPaid ? 'Vraćeno na neplaćeno.' : 'Označeno kao plaćeno.');
+    if (isPaid) {
+      toast.success('Vraćeno na neplaćeno.');
+      return;
+    }
+    // A paid job gets its final PDF (with "PLAĆENO") filed automatically.
+    const archived = await archiveWorkOrder(job.id);
+    toast.success(archived ? 'Plaćeno — račun spremljen u arhivu.' : 'Označeno kao plaćeno.');
+    if (archived) onArchived?.();
   }
 
   return (

@@ -1,0 +1,4 @@
+DejaVu Sans (Regular, Bold) 2.37 — free license derived from the Bitstream Vera
+Fonts license (https://dejavu-fonts.github.io/License.html); redistribution and
+embedding permitted.
+Used to embed Croatian characters (č ć đ š ž) and € in generated work-order PDFs.

@@ -48,6 +48,7 @@ import JobMessages from './tasks/JobMessages';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
+import { archiveWorkOrder } from '@/lib/archiveWorkOrder';
 import { SYMPTOM_OPTIONS } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
 import type { Client, Job, JobEvent, JobStatus, JobUpdate, MechanicTask, StaffRole, Vehicle } from '@/types/database';
@@ -226,6 +227,10 @@ export default function JobDetailView({
 
     setCurrentJob(redactJobForRole(data, viewerRole));
     toast.success('Nalog je zaključan.');
+
+    // The locked job is the final record — file its PDF automatically.
+    if (await archiveWorkOrder(currentJob.id)) setPhotoRefreshKey((k) => k + 1);
+    else toast.error('PDF naloga nije spremljen. Spremi ga s radnog naloga (⋯ → Radni nalog).');
   }
 
   return (
@@ -385,7 +390,11 @@ export default function JobDetailView({
               setCurrentJob((prev) => ({ ...prev, total_labor_cost: laborCost, total_parts_cost: partsCost }))
             }
           />
-          <PaymentStatusControl job={currentJob} onChanged={(patch) => setCurrentJob((prev) => ({ ...prev, ...patch }))} />
+          <PaymentStatusControl
+            job={currentJob}
+            onChanged={(patch) => setCurrentJob((prev) => ({ ...prev, ...patch }))}
+            onArchived={() => setPhotoRefreshKey((k) => k + 1)}
+          />
         </Card>
       )}
 
