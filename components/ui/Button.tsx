@@ -31,7 +31,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   default: 'min-h-[52px] px-6 text-base',
-  sm: 'min-h-[44px] px-4 text-sm',
+  sm: 'min-h-[48px] px-4 text-sm',
   lg: 'min-h-[60px] px-8 text-lg',
   icon: 'h-[52px] w-[52px] flex-shrink-0 px-0',
 };

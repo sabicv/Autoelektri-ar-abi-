@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Car, Phone, Plus, Search, User, Users } from 'lucide-react';
 import Card from '@/components/ui/Card';
-import NewJobModal from './NewJobModal';
+import dynamic from 'next/dynamic';
 import { vehicleLabel } from '@/lib/format';
 import type { Client, Vehicle } from '@/types/database';
+
+const NewJobModal = dynamic(() => import('./NewJobModal'), { ssr: false });
 
 interface ClientsBoardProps {
   clients: Client[];
@@ -87,7 +89,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
                     </p>
                     <a
                       href={`tel:${client.phone_number}`}
-                      className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400"
+                      className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-300"
                     >
                       <Phone className="h-3 w-3 flex-shrink-0" strokeWidth={2} /> {client.phone_number}
                     </a>
@@ -99,7 +101,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
                       <Link
                         key={v.id}
                         href={`/dashboard/vehicles/${v.id}`}
-                        className="press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-blue-400 dark:border-workshop-border dark:text-slate-200"
+                        className="press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-blue-400 dark:border-workshop-border dark:text-slate-200"
                       >
                         <Car className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" strokeWidth={2} />
                         {vehicleLabel(v)}
@@ -113,13 +115,15 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
         </div>
       )}
 
-      <NewJobModal
-        open={newClientOpen}
-        onClose={() => setNewClientOpen(false)}
-        tenantId={tenantId}
-        title="Novi klijent i vozilo"
-        mode="client"
-      />
+      {newClientOpen && (
+        <NewJobModal
+          open
+          onClose={() => setNewClientOpen(false)}
+          tenantId={tenantId}
+          title="Novi klijent i vozilo"
+          mode="client"
+        />
+      )}
     </div>
   );
 }

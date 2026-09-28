@@ -5,6 +5,7 @@ import { Camera, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
+import { compressImage } from '@/lib/compressImage';
 import { cn } from '@/lib/utils';
 import type { PhotoTag } from '@/types/database';
 
@@ -44,8 +45,10 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
     setIsUploading(true);
 
     const supabase = createBrowserSupabaseClient();
+    let saved = 0;
 
-    for (const file of Array.from(fileList)) {
+    for (const original of Array.from(fileList)) {
+      const file = await compressImage(original);
       // Staff already has full RLS access to their own tenant's job-vault
       // folder, so this uploads straight to the final path — no temp
       // staging + move step needed (that dance exists only for the public,
@@ -70,14 +73,17 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
       });
 
       if (insertError) {
-        toast.error('Datoteka je prenesena, ali nije zabilježena u arhivu.');
+        toast.error('Datoteka je prenesena, ali nije zabilježena na nalogu.');
         continue;
       }
+      saved += 1;
     }
 
     setIsUploading(false);
-    toast.success(isDocumentLike ? 'Dokument dodan u arhiv.' : 'Fotografija dodana u arhiv.');
-    onUploaded?.();
+    if (saved > 0) {
+      toast.success(isDocumentLike ? 'Dokument spremljen.' : 'Fotografija spremljena.');
+      onUploaded?.();
+    }
   }
 
   return (
@@ -89,7 +95,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
             type="button"
             onClick={() => setTag(t)}
             className={cn(
-              'press-effect rounded-full px-2.5 py-1 text-xs font-semibold',
+              'press-effect min-h-[48px] rounded-full px-3.5 text-sm font-semibold',
               tag === t
                 ? 'bg-blue-600 text-white dark:bg-electric-blue dark:text-workshop-dark'
                 : 'bg-slate-100 text-slate-600 dark:bg-workshop-surface-hover dark:text-slate-300'
@@ -104,7 +110,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={isUploading}
-        className="press-effect flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-semibold text-slate-500 disabled:opacity-60 dark:border-workshop-border dark:text-slate-400"
+        className="press-effect flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-semibold text-slate-500 disabled:opacity-60 dark:border-workshop-border dark:text-slate-300"
       >
         {isUploading ? (
           <Loader2 className="h-4 w-4 animate-spin" />

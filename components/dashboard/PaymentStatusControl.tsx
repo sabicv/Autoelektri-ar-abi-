@@ -60,7 +60,7 @@ export default function PaymentStatusControl({ job, onChanged }: PaymentStatusCo
           {PAYMENT_STATUS_LABELS_HR[job.payment_status]}
         </span>
         {isPaid && job.paid_at && (
-          <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
+          <span className="ml-2 text-xs text-slate-400 dark:text-slate-400">
             {new Date(job.paid_at).toLocaleDateString('hr-HR')}
           </span>
         )}
@@ -70,7 +70,7 @@ export default function PaymentStatusControl({ job, onChanged }: PaymentStatusCo
         onClick={toggle}
         disabled={isSaving}
         className={cn(
-          'press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-60',
+          'press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-60',
           isPaid
             ? 'border border-slate-300 text-slate-600 dark:border-workshop-border dark:text-slate-300'
             : 'bg-emerald-600 text-white'

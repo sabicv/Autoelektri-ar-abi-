@@ -52,7 +52,7 @@ export default function VehicleHistoryTimeline({ jobs, reportsByJobId, showCosts
       </div>
 
       {filteredJobs.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-slate-500 dark:text-slate-300">
           {dtcQuery ? `Nema naloga s DTC kodom koji sadrži "${dtcQuery}".` : 'Nema zabilježenih naloga za ovo vozilo.'}
         </p>
       ) : (
@@ -65,7 +65,7 @@ export default function VehicleHistoryTimeline({ jobs, reportsByJobId, showCosts
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Link href={`/dashboard/jobs/${job.id}`} className="flex items-center gap-2">
                     <Badge variant={STATUS_BADGE_VARIANT[job.status]}>{JOB_STATUS_LABELS_HR[job.status]}</Badge>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-xs text-slate-400 dark:text-slate-400">
                       {new Date(job.created_at).toLocaleDateString('hr-HR')}
                     </span>
                   </Link>

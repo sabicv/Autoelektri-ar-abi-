@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Camera, CheckCircle2, Loader2, X, ZoomIn } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/compressImage';
 import type { PhotoTag } from '@/types/database';
 
 export interface UploadedPhoto {
@@ -62,7 +63,8 @@ export default function PhotoUploadDropzone({
 
     const files = Array.from(fileList).slice(0, remainingSlots);
 
-    for (const file of files) {
+    for (const original of files) {
+      const file = await compressImage(original);
       if (file.size > maxFileSizeMb * 1024 * 1024) {
         setGlobalError(`Fotografija "${file.name}" je prevelika (max ${maxFileSizeMb}MB).`);
         continue;
@@ -108,7 +110,14 @@ export default function PhotoUploadDropzone({
       <p className="mb-1 text-sm font-semibold text-slate-800">{label}</p>
       {hint && <p className="mb-3 text-xs text-slate-500">{hint}</p>}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div
+        className="grid grid-cols-3 gap-2"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleFiles(e.dataTransfer.files);
+        }}
+      >
         <AnimatePresence initial={false}>
           {photos.map((photo) => (
             <motion.div
@@ -137,10 +146,12 @@ export default function PhotoUploadDropzone({
               <button
                 type="button"
                 onClick={() => removePhoto(photo)}
-                className="press-effect absolute left-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
+                className="press-effect absolute left-0 top-0 flex h-12 w-12 items-start justify-start p-1"
                 aria-label="Ukloni fotografiju"
               >
-                <X className="h-4 w-4" strokeWidth={2} />
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white">
+                  <X className="h-4 w-4" strokeWidth={2} />
+                </span>
               </button>
             </motion.div>
           ))}
@@ -225,7 +236,7 @@ export default function PhotoUploadDropzone({
             <button
               type="button"
               onClick={() => setPreviewPhoto(null)}
-              className="press-effect absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
+              className="press-effect absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white"
               aria-label="Zatvori"
             >
               <X className="h-6 w-6" strokeWidth={2} />

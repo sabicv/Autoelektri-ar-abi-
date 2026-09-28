@@ -195,7 +195,7 @@ const ClientVehicleEditor = forwardRef<SectionHandle, ClientVehicleEditorProps>(
               <label
                 key={option.code}
                 className={cn(
-                  'flex min-h-[44px] items-center gap-2 rounded-xl border-2 px-3 text-sm',
+                  'flex min-h-[48px] items-center gap-2 rounded-xl border-2 px-3 text-sm',
                   locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
                   checked
                     ? 'border-blue-600 bg-blue-50 dark:border-electric-blue dark:bg-electric-blue/10'

@@ -60,6 +60,12 @@ export const newJobSchema = z.object({
 
 export type NewJobValues = z.infer<typeof newJobSchema>;
 
+// A returning vehicle: client and vehicle are already on file, so a new
+// job only needs what's new about this visit.
+export const existingVehicleJobSchema = newJobSchema
+  .pick({ symptoms: true, description: true, isEmergency: true, photos: true })
+  .extend({ vehicleId: z.string().uuid() });
+
 // Registering a client + vehicle ahead of any repair — no job is created.
 export const newClientSchema = newJobSchema.pick({
   firstName: true,

@@ -1,10 +1,11 @@
 'use client';
 
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useSpeechToText } from '@/lib/useSpeechToText';
+import { clearDraft, readDraft, writeDraft } from '@/lib/drafts';
 import { cn } from '@/lib/utils';
 import type { SectionHandle } from './sectionHandle';
 
@@ -22,6 +23,18 @@ const VoiceWorkLogger = forwardRef<SectionHandle, VoiceWorkLoggerProps>(function
 ) {
   const [summary, setSummary] = useState(initialWorkSummary ?? '');
   const savedRef = useRef(initialWorkSummary ?? '');
+  const draftKey = `draft:job:${jobId}:work`;
+
+  useEffect(() => {
+    if (locked) return;
+    const draft = readDraft<string>(draftKey);
+    if (draft !== null && draft !== savedRef.current) setSummary(draft);
+  }, [draftKey, locked]);
+
+  useEffect(() => {
+    if (summary === savedRef.current) clearDraft(draftKey);
+    else writeDraft(draftKey, summary);
+  }, [summary, draftKey]);
 
   const handleFinalText = useCallback((final: string) => {
     setSummary((prev) => (prev ? `${prev} ${final}`.trim() : final.trim()));
@@ -52,6 +65,7 @@ const VoiceWorkLogger = forwardRef<SectionHandle, VoiceWorkLoggerProps>(function
       });
 
       savedRef.current = summary;
+      clearDraft(draftKey);
       onSaved?.(summary);
       return true;
     },
@@ -68,7 +82,7 @@ const VoiceWorkLogger = forwardRef<SectionHandle, VoiceWorkLoggerProps>(function
             type="button"
             onClick={toggleRecording}
             className={cn(
-              'press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
+              'press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
               isRecording
                 ? 'bg-alarm-red text-white'
                 : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'

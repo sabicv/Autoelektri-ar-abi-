@@ -140,7 +140,7 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
               className="h-16 w-16 rounded-full border border-slate-200 object-cover"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400 dark:bg-workshop-surface-hover dark:text-slate-500">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400 dark:bg-workshop-surface-hover dark:text-slate-400">
               Logo
             </div>
           )}
@@ -148,7 +148,7 @@ export default function TenantSettingsForm({ tenant }: TenantSettingsFormProps) 
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploadingLogo}
-            className="press-effect flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-60 dark:border-workshop-border dark:text-slate-200"
+            className="press-effect flex min-h-[48px] items-center gap-2 rounded-xl border-2 border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-60 dark:border-workshop-border dark:text-slate-200"
           >
             {isUploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {isUploadingLogo ? 'Prijenos…' : 'Promijeni logotip'}
@@ -299,7 +299,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && !error && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{hint}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-slate-400 dark:text-slate-400">{hint}</p>}
       {error && (
         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600">
           <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" /> {error}

@@ -162,7 +162,7 @@ export default function NotificationDraftModal({
           <button
             type="button"
             onClick={onClose}
-            className="press-effect flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-workshop-surface-hover"
+            className="press-effect flex h-12 w-12 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-workshop-surface-hover"
             aria-label="Zatvori"
           >
             <X className="h-5 w-5" strokeWidth={2} />
@@ -221,7 +221,7 @@ export default function NotificationDraftModal({
               <button
                 type="button"
                 onClick={regenerateUpsellDraft}
-                className="press-effect min-h-[44px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
+                className="press-effect min-h-[48px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
               >
                 Generiraj prijedlog poruke
               </button>
@@ -249,7 +249,7 @@ export default function NotificationDraftModal({
               <button
                 type="button"
                 onClick={regenerateDiagnosticDraft}
-                className="press-effect min-h-[44px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
+                className="press-effect min-h-[48px] w-full rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 dark:border-electric-blue/30 dark:bg-electric-blue/10 dark:text-electric-blue"
               >
                 Generiraj prijedlog poruke
               </button>

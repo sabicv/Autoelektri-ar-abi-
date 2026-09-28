@@ -20,14 +20,14 @@ export default function TenantSuspendedScreen() {
         <Lock className="h-7 w-7" strokeWidth={2} />
       </div>
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Pristup je privremeno zaustavljen</h1>
-      <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+      <p className="max-w-sm text-sm text-slate-600 dark:text-slate-300">
         Korištenje aplikacije za ovu radionicu je trenutno onemogućeno. Za ponovnu aktivaciju obratite se dobavljaču
         aplikacije. Vaši podaci su sačuvani.
       </p>
       <button
         type="button"
         onClick={handleLogout}
-        className="press-effect flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-700 dark:border-workshop-border dark:text-slate-200"
+        className="press-effect flex min-h-[48px] items-center gap-2 rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-700 dark:border-workshop-border dark:text-slate-200"
       >
         <LogOut className="h-4 w-4" strokeWidth={2} />
         Odjava

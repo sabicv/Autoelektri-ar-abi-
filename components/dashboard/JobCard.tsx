@@ -79,9 +79,9 @@ export default function JobCard({ job, clientName, vehicle }: JobCardProps) {
               <Car className="h-4 w-4 flex-shrink-0 text-slate-400" strokeWidth={2} />
               {vehicleLabel(vehicle)}
             </p>
-            <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{clientName}</p>
+            <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-300">{clientName}</p>
             {showParkedDuration && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400">
                 <Clock className="h-3.5 w-3.5" strokeWidth={2} />
                 Vozilo parkirano {daysParked} {daysParked === 1 ? 'dan' : 'dana'}
               </p>

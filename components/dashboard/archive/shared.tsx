@@ -25,7 +25,7 @@ export function ArchiveRow({
         {/* Meta sits under the title, not beside it — side-by-side squeezed the title to nothing on phones. */}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{title}</p>
-          {subtitle && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          {subtitle && <p className="truncate text-xs text-slate-500 dark:text-slate-300">{subtitle}</p>}
           {meta && <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{meta}</div>}
         </div>
         <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
@@ -39,7 +39,7 @@ export function FilterPill({ href, active, children }: { href: string; active: b
     <Link
       href={href}
       className={cn(
-        'press-effect whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold',
+        'press-effect inline-flex min-h-[48px] items-center whitespace-nowrap rounded-full px-4 text-sm font-semibold',
         active
           ? 'bg-blue-600 text-white dark:bg-electric-blue dark:text-workshop-dark'
           : 'bg-slate-100 text-slate-600 dark:bg-workshop-surface-hover dark:text-slate-300'

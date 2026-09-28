@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Inbox, Plus, Search } from 'lucide-react';
 import JobCard from './JobCard';
-import NewJobModal from './NewJobModal';
+import dynamic from 'next/dynamic';
 import { vehicleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Client, Job, Vehicle } from '@/types/database';
+
+const NewJobModal = dynamic(() => import('./NewJobModal'), { ssr: false });
 
 type Filter = 'ACTIVE' | 'DIAGNOSTIC' | 'READY' | 'COLLECTED';
 
@@ -104,10 +106,10 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
             type="button"
             onClick={() => setFilter(f.key)}
             className={cn(
-              'press-effect min-h-[44px] flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors',
+              'press-effect min-h-[48px] flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors',
               filter === f.key
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-workshop-surface-hover dark:text-slate-100'
-                : 'text-slate-500 dark:text-slate-400'
+                : 'text-slate-500 dark:text-slate-300'
             )}
           >
             {f.label}
@@ -145,7 +147,7 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
         </motion.div>
       )}
 
-      <NewJobModal open={newJobOpen} onClose={() => setNewJobOpen(false)} tenantId={tenantId} />
+      {newJobOpen && <NewJobModal open onClose={() => setNewJobOpen(false)} tenantId={tenantId} />}
     </div>
   );
 }

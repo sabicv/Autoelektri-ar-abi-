@@ -9,6 +9,14 @@ import { useSpeechToText } from '@/lib/useSpeechToText';
 import { cn } from '@/lib/utils';
 import Skeleton from '@/components/ui/Skeleton';
 import type { SectionHandle } from './sectionHandle';
+import { clearDraft, readDraft, writeDraft } from '@/lib/drafts';
+
+interface DiagnosticDraft {
+  codes: string[];
+  drain: string;
+  modules: string;
+  notes: string;
+}
 
 interface DiagnosticWorkbenchProps {
   jobId: string;
@@ -33,6 +41,13 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
   const savedRef = useRef('');
   const snapshot = (codes: string[], drain: string, modules: string, notes: string) =>
     JSON.stringify([codes, drain, modules, notes]);
+  const draftKey = `draft:job:${jobId}:diagnostic`;
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (snapshot(dtcCodes, batteryDrainMa, moduleNotes, diagnosticNotes) === savedRef.current) clearDraft(draftKey);
+    else writeDraft(draftKey, { codes: dtcCodes, drain: batteryDrainMa, modules: moduleNotes, notes: diagnosticNotes } satisfies DiagnosticDraft);
+  }, [isLoading, dtcCodes, batteryDrainMa, moduleNotes, diagnosticNotes, draftKey]);
 
   const suggestions = useMemo(
     () => searchDtcCodes(dtcInput).filter((s) => !dtcCodes.includes(s.code)),
@@ -67,10 +82,14 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
       const codes = data?.dtc_codes ?? [];
       const drain = data?.battery_drain_ma != null ? String(data.battery_drain_ma) : '';
       const modules = data?.module_notes ?? '';
-      setDtcCodes(codes);
-      setBatteryDrainMa(drain);
-      setModuleNotes(modules);
       savedRef.current = snapshot(codes, drain, modules, initialDiagnosticNotes ?? '');
+
+      // Unsaved input from a closed tab / lost signal wins over the saved report.
+      const draft = locked ? null : readDraft<DiagnosticDraft>(draftKey);
+      setDtcCodes(draft?.codes ?? codes);
+      setBatteryDrainMa(draft?.drain ?? drain);
+      setModuleNotes(draft?.modules ?? modules);
+      if (draft) setDiagnosticNotes(draft.notes);
       setIsLoading(false);
     }
 
@@ -144,6 +163,7 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
       });
 
       savedRef.current = snapshot(dtcCodes, batteryDrainMa, moduleNotes, diagnosticNotes);
+      clearDraft(draftKey);
       onSaved?.(diagnosticNotes);
       return true;
     },
@@ -188,20 +208,16 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
         {dtcCodes.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {dtcCodes.map((code) => (
-              <span
+              <button
                 key={code}
-                className="flex items-center gap-1 rounded-full bg-electric-blue/10 px-2.5 py-1 text-xs font-bold text-electric-blue"
+                type="button"
+                onClick={() => removeCode(code)}
+                aria-label={`Ukloni ${code}`}
+                className="press-effect flex min-h-[48px] items-center gap-1.5 rounded-full bg-electric-blue/10 px-4 text-sm font-bold text-electric-blue hover:bg-electric-blue/20"
               >
                 {code}
-                <button
-                  type="button"
-                  onClick={() => removeCode(code)}
-                  aria-label={`Ukloni ${code}`}
-                  className="rounded-full hover:bg-electric-blue/20"
-                >
-                  <X className="h-3 w-3" strokeWidth={2.5} />
-                </button>
-              </span>
+                <X className="h-4 w-4" strokeWidth={2.5} />
+              </button>
             ))}
           </div>
         )}
@@ -233,11 +249,11 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => addCode(s.code)}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-workshop-surface-hover"
+                  className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left text-sm hover:bg-slate-50 dark:hover:bg-workshop-surface-hover"
                 >
                   <span>
                     <span className="font-bold text-slate-900 dark:text-slate-100">{s.code}</span>{' '}
-                    <span className="text-slate-500 dark:text-slate-400">{s.description}</span>
+                    <span className="text-slate-500 dark:text-slate-300">{s.description}</span>
                   </span>
                 </button>
               ))}
@@ -277,7 +293,7 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
               type="button"
               onClick={toggleNotesDictation}
               className={cn(
-                'press-effect flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
+                'press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold',
                 isDictatingNotes
                   ? 'bg-alarm-red text-white'
                   : 'bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue'

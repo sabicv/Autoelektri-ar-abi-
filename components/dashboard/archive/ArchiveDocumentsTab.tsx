@@ -63,7 +63,7 @@ export async function ArchiveDocumentsTab({
                 className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
               >
                 {isPdf || !url ? (
-                  <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
+                  <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-400">
                     <FileText className="h-8 w-8" strokeWidth={1.5} />
                   </div>
                 ) : (

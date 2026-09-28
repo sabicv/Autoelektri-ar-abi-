@@ -56,9 +56,14 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
   // a ref so onend (fired by the browser) always reads the latest value.
   const keepGoingRef = useRef(false);
   const isMobileRef = useRef(false);
-  // Guards against re-emitting a final result Chrome re-delivers verbatim
-  // after one of its own internal restarts in continuous mode.
+  // Android Chrome re-delivers finals: sometimes verbatim, sometimes as the
+  // whole utterance so far ("prazan" → "prazan akumulator"). Only the part
+  // not yet emitted is passed on, so text never doubles up.
   const lastFinalTranscriptRef = useRef('');
+  // Did the current recognition session hear anything? Restarting after a
+  // silent session is what made phones beep and buzz in a loop.
+  const heardSpeechRef = useRef(false);
+  const sessionHadSpeechRef = useRef(false);
 
   useEffect(() => {
     const w = window as unknown as {
@@ -72,15 +77,14 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       return;
     }
 
-    // Phone browsers play a system beep/vibration every time recognition
-    // starts and end it on every pause, so an auto-restart loop there made the
-    // phone buzz nonstop. On phones: one utterance per tap, no restart.
-    // Desktop Chrome handles continuous listening fine.
+    // Phone browsers end recognition on every pause and beep/vibrate on every
+    // start. So: keep listening across pauses while the mechanic is talking,
+    // but once a session ends having heard nothing, stop instead of looping.
     isMobileRef.current = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     const recognition = new Ctor();
     recognition.lang = 'hr-HR';
-    recognition.continuous = !isMobileRef.current;
+    recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
@@ -88,21 +92,29 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
       const finalChunks: string[] = [];
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) {
-          const transcript = result[0].transcript;
-          if (transcript && transcript !== lastFinalTranscriptRef.current) {
-            finalChunks.push(transcript);
-            lastFinalTranscriptRef.current = transcript;
-          }
-        } else {
-          interim += result[0].transcript;
+        const transcript = result[0].transcript.trim();
+        if (!transcript) continue;
+        heardSpeechRef.current = true;
+        sessionHadSpeechRef.current = true;
+
+        if (!result.isFinal) {
+          interim += `${transcript} `;
+          continue;
         }
+
+        const previous = lastFinalTranscriptRef.current;
+        const addition = previous && transcript.startsWith(previous) ? transcript.slice(previous.length).trim() : transcript;
+        lastFinalTranscriptRef.current = transcript;
+        if (addition && addition !== previous) finalChunks.push(addition);
       }
       if (finalChunks.length > 0) onFinalTextRef.current?.(finalChunks.join(' '));
-      setInterimText(interim);
+      setInterimText(interim.trim());
     };
 
     recognition.onerror = (event) => {
+      // Silence after the mechanic has already dictated is just "done".
+      if (event.error === 'no-speech' && sessionHadSpeechRef.current) return;
+      if (event.error === 'aborted') return;
       keepGoingRef.current = false;
       setIsRecording(false);
       const message = ERROR_MESSAGES_HR[event.error];
@@ -111,12 +123,14 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
 
     recognition.onend = () => {
       setInterimText('');
-      if (keepGoingRef.current && !isMobileRef.current) {
+      const shouldRestart = keepGoingRef.current && (!isMobileRef.current || heardSpeechRef.current);
+      heardSpeechRef.current = false;
+      if (shouldRestart) {
         try {
           recognition.start();
           return;
         } catch {
-          keepGoingRef.current = false;
+          // Fall through to stopping.
         }
       }
       keepGoingRef.current = false;
@@ -142,6 +156,8 @@ export function useSpeechToText({ onFinalText }: UseSpeechToTextOptions = {}) {
     }
 
     lastFinalTranscriptRef.current = '';
+    heardSpeechRef.current = false;
+    sessionHadSpeechRef.current = false;
     keepGoingRef.current = true;
     try {
       recognition.start();

@@ -22,7 +22,7 @@ export default function CollapsibleCard({ title, icon, summary, defaultOpen = fa
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex min-h-[32px] w-full items-center gap-2 text-left"
+        className="flex min-h-[48px] w-full items-center gap-2 text-left"
       >
         <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
           {icon}
@@ -33,7 +33,7 @@ export default function CollapsibleCard({ title, icon, summary, defaultOpen = fa
           strokeWidth={2}
         />
       </button>
-      {!open && summary && <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">{summary}</div>}
+      {!open && summary && <div className="mt-1 text-sm text-slate-500 dark:text-slate-300">{summary}</div>}
       {/* Kept mounted while closed so unsaved edits (and form refs) survive collapsing. */}
       <div className="mt-3" hidden={!open}>
         {children}

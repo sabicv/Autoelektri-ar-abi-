@@ -74,7 +74,7 @@ export default function SmartLockboxModal({ open, onClose, job, onSent }: SmartL
           <button
             type="button"
             onClick={onClose}
-            className="press-effect flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-workshop-surface-hover"
+            className="press-effect flex h-12 w-12 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-workshop-surface-hover"
             aria-label="Zatvori"
           >
             <X className="h-5 w-5" strokeWidth={2} />
@@ -90,7 +90,7 @@ export default function SmartLockboxModal({ open, onClose, job, onSent }: SmartL
           <button
             type="button"
             onClick={regeneratePin}
-            className="press-effect mt-1 flex min-h-[44px] items-center gap-1.5 px-2 text-xs font-semibold text-blue-600 dark:text-electric-blue"
+            className="press-effect mt-1 flex min-h-[48px] items-center gap-1.5 px-2 text-xs font-semibold text-blue-600 dark:text-electric-blue"
           >
             <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} /> Generiraj novi PIN
           </button>

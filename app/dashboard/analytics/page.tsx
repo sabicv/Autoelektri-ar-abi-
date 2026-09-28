@@ -99,7 +99,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
             <RevenueRow label="Rad" amount={stats.totalLaborRevenue} total={stats.totalRevenue} />
             <RevenueRow label="Dijelovi" amount={stats.totalPartsRevenue} total={stats.totalRevenue} />
           </div>
-          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-400">
             Sati dijagnostike: {stats.totalDiagnosticHours.toFixed(1)} h · sati popravka: {stats.totalRepairHours.toFixed(1)} h
           </p>
         </Card>
@@ -123,7 +123,7 @@ function StatCard({
     <Card className="p-4">
       <Icon className={`h-5 w-5 ${accent}`} strokeWidth={2} />
       <p className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">{value}</p>
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-300">{label}</p>
     </Card>
   );
 }

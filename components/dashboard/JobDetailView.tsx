@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Bell,
@@ -38,8 +39,7 @@ import VoiceWorkLogger from './VoiceWorkLogger';
 import JobPhotoVault from './JobPhotoVault';
 import JobPhotoUploader from './JobPhotoUploader';
 import JobHistoryTimeline from './JobHistoryTimeline';
-import NotificationDraftModal, { type NotificationType } from './NotificationDraftModal';
-import SmartLockboxModal from './SmartLockboxModal';
+import type { NotificationType } from './NotificationDraftModal';
 import type { SectionHandle } from './sectionHandle';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
@@ -47,6 +47,10 @@ import { jobTotal, redactJobForRole } from '@/lib/finance';
 import { SYMPTOM_OPTIONS } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
 import type { Client, Job, JobEvent, JobStatus, JobUpdate, StaffRole, Vehicle } from '@/types/database';
+
+// Opened on demand only — kept out of the job page's initial bundle.
+const NotificationDraftModal = dynamic(() => import('./NotificationDraftModal'), { ssr: false });
+const SmartLockboxModal = dynamic(() => import('./SmartLockboxModal'), { ssr: false });
 
 const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'PENDING_TRIAGE',
@@ -154,8 +158,9 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
     setIsSaving(true);
     const result = await saveChangedSections();
     setIsSaving(false);
-    if (result === null) toast('Nema promjena za spremanje.');
-    else if (result) toast.success('Promjene spremljene.');
+    // Photos are stored the moment they're added, so "nothing pending" is a
+    // confirmation, not an error.
+    if (result !== false) toast.success(result === null ? 'Sve je spremljeno.' : 'Promjene spremljene.');
   }
 
   async function handleConfirm() {
@@ -201,7 +206,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
     <div className="mx-auto max-w-2xl space-y-3 pb-10">
       <Link
         href="/dashboard/jobs"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+        className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Natrag na poslove
       </Link>
@@ -230,13 +235,13 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
           <span className="truncate">{vehicleLabel(currentVehicle)}</span>
           <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
         </Link>
-        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-300">
           <User className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
           {currentClient.first_name} {currentClient.last_name}
         </p>
         {symptomSummary && <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{symptomSummary}</p>}
         {showParkedDuration && (
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-400">
             Vozilo parkirano {daysParked} {daysParked === 1 ? 'dan' : 'dana'}
           </p>
         )}
@@ -244,7 +249,7 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
         <div className="mt-4 flex gap-2">
           <a
             href={`tel:${currentClient.phone_number}`}
-            className="press-effect inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
+            className="press-effect inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
           >
             <Phone className="h-4 w-4" strokeWidth={2} /> Nazovi
           </a>

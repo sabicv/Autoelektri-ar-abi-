@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR, isPdfPath } from '@/lib/format';
 import Skeleton from '@/components/ui/Skeleton';
-import PhotoLightbox, { type LightboxPhoto } from './PhotoLightbox';
+import dynamic from 'next/dynamic';
+import type { LightboxPhoto } from './PhotoLightbox';
+
+const PhotoLightbox = dynamic(() => import('./PhotoLightbox'), { ssr: false });
 
 interface JobPhotoVaultProps {
   jobId: string;
@@ -134,7 +137,7 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
               aria-label={isDocument ? 'Otvori dokument' : 'Prikaži fotografiju'}
             >
               {isDocument ? (
-                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 p-2 text-slate-400 dark:text-slate-500">
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 p-2 text-slate-400 dark:text-slate-400">
                   <FileText className="h-8 w-8" strokeWidth={1.5} />
                 </div>
               ) : (
@@ -154,9 +157,11 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
                 onClick={() => handleDelete(photo)}
                 disabled={deletingId === photo.id}
                 aria-label="Obriši fotografiju"
-                className="press-effect absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white disabled:opacity-50"
+                className="press-effect absolute right-0 top-0 flex h-12 w-12 items-start justify-end p-1 disabled:opacity-50"
               >
-                <Trash2 className="h-4 w-4" strokeWidth={2} />
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white">
+                  <Trash2 className="h-4 w-4" strokeWidth={2} />
+                </span>
               </button>
             )}
           </div>

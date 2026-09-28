@@ -86,7 +86,7 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
           type="button"
           onClick={() => setMoreOpen(true)}
           aria-label="Više opcija"
-          className="press-effect flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-workshop-surface-hover"
+          className="press-effect flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-workshop-surface-hover"
         >
           <MoreVertical className="h-5 w-5" strokeWidth={2} />
         </button>
@@ -104,7 +104,7 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
                 'press-effect flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center transition-colors',
                 active
                   ? 'text-blue-700 dark:text-electric-blue'
-                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-workshop-surface-hover'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-workshop-surface-hover'
               )}
             >
               <Icon className="h-5 w-5" strokeWidth={2} />

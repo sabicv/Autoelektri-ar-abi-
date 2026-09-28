@@ -103,7 +103,7 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
                 {member.full_name ?? 'Bez imena'}
                 {member.id === currentUserId && <span className="font-normal text-slate-400"> (vi)</span>}
               </p>
-              {member.email && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{member.email}</p>}
+              {member.email && <p className="truncate text-xs text-slate-500 dark:text-slate-300">{member.email}</p>}
             </div>
             <span
               className={cn(
@@ -121,7 +121,7 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
                 onClick={() => handleRemove(member)}
                 disabled={removingId === member.id}
                 aria-label="Ukloni djelatnika"
-                className="press-effect flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10"
+                className="press-effect flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10"
               >
                 {removingId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
@@ -167,14 +167,14 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
                 setShowForm(false);
                 setErrors({});
               }}
-              className="press-effect min-h-[44px] flex-1 rounded-xl border border-slate-300 text-sm font-semibold text-slate-600 dark:border-workshop-border dark:text-slate-300"
+              className="press-effect min-h-[48px] flex-1 rounded-xl border border-slate-300 text-sm font-semibold text-slate-600 dark:border-workshop-border dark:text-slate-300"
             >
               Odustani
             </button>
             <button
               type="submit"
               disabled={isAdding}
-              className="press-effect flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
+              className="press-effect flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white disabled:opacity-60 dark:bg-electric-blue dark:text-workshop-dark"
             >
               {isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
               {isAdding ? 'Dodavanje…' : 'Dodaj'}
@@ -185,7 +185,7 @@ export default function StaffManager({ initialStaff, currentUserId }: StaffManag
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="press-effect flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-semibold text-slate-600 dark:border-workshop-border dark:text-slate-300"
+          className="press-effect flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-semibold text-slate-600 dark:border-workshop-border dark:text-slate-300"
         >
           <UserPlus className="h-4 w-4" strokeWidth={2} />
           Dodaj mehaničara

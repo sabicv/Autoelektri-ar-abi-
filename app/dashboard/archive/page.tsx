@@ -48,7 +48,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
           <Link
             href={`/dashboard/archive?tab=${tab}`}
             aria-label="Očisti pretragu"
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400"
+            className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400"
           >
             <X className="h-4 w-4" strokeWidth={2} />
           </Link>
@@ -56,7 +56,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
       </form>
 
       {query.length > 0 && !isSearching && (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Unesite barem 2 znaka za pretragu.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-300">Unesite barem 2 znaka za pretragu.</p>
       )}
 
       {isSearching ? (
@@ -69,10 +69,10 @@ export default async function ArchivePage({ searchParams }: PageProps) {
                 key={t.id}
                 href={`/dashboard/archive?tab=${t.id}`}
                 className={cn(
-                  'press-effect rounded-lg py-2 text-center text-sm font-semibold',
+                  'press-effect flex min-h-[48px] items-center justify-center rounded-lg text-sm font-semibold',
                   tab === t.id
                     ? 'bg-white text-slate-900 shadow-sm dark:bg-workshop-dark dark:text-slate-100'
-                    : 'text-slate-500 dark:text-slate-400'
+                    : 'text-slate-500 dark:text-slate-300'
                 )}
               >
                 {t.label}

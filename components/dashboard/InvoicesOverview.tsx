@@ -50,11 +50,11 @@ export default async function InvoicesOverview({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Neplaćeno ({unpaidCount})</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-300">Neplaćeno ({unpaidCount})</p>
           <p className="mt-1 text-lg font-black text-amber-600 dark:text-amber-400">{formatEuroHR(unpaidTotal)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Naplaćeno ovaj mjesec</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-300">Naplaćeno ovaj mjesec</p>
           <p className="mt-1 text-lg font-black text-emerald-600 dark:text-emerald-400">{formatEuroHR(paidThisMonth)}</p>
         </Card>
       </div>

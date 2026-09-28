@@ -113,7 +113,7 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
           <button
             type="button"
             onClick={onClose}
-            className="press-effect flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full hover:bg-white/10"
+            className="press-effect flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full hover:bg-white/10"
             aria-label="Zatvori"
           >
             <X className="h-6 w-6" strokeWidth={2} />
@@ -143,7 +143,7 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
               <button
                 type="button"
                 onClick={() => goTo(index - 1)}
-                className="press-effect absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white"
+                className="press-effect absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white"
                 aria-label="Prethodna fotografija"
               >
                 <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -151,7 +151,7 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
               <button
                 type="button"
                 onClick={() => goTo(index + 1)}
-                className="press-effect absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white"
+                className="press-effect absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white"
                 aria-label="Sljedeća fotografija"
               >
                 <ChevronRight className="h-6 w-6" strokeWidth={2} />

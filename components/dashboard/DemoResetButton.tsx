@@ -31,7 +31,7 @@ export default function DemoResetButton() {
 
   return (
     <details className="group max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-workshop-border dark:bg-workshop-surface">
-      <summary className="cursor-pointer list-none text-sm font-semibold text-slate-500 dark:text-slate-400">
+      <summary className="cursor-pointer list-none text-sm font-semibold text-slate-500 dark:text-slate-300">
         Demo podaci (za prezentacije) <span className="text-slate-300 group-open:hidden">▸</span>
       </summary>
       <div className="mt-3">

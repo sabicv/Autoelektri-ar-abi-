@@ -9,7 +9,7 @@ const ACTOR_LABELS_HR: Record<JobEvent['actor'], string> = {
 
 export default function JobHistoryTimeline({ events }: { events: JobEvent[] }) {
   if (events.length === 0) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">Još nema zabilježenih događaja.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-300">Još nema zabilježenih događaja.</p>;
   }
 
   return (
@@ -21,7 +21,7 @@ export default function JobHistoryTimeline({ events }: { events: JobEvent[] }) {
           </div>
           <div className="min-w-0 flex-1 border-b border-slate-100 pb-3 dark:border-workshop-border">
             <p className="text-sm text-slate-800 dark:text-slate-200">{event.message ?? event.event_type}</p>
-            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-400">
               {ACTOR_LABELS_HR[event.actor]} ·{' '}
               {new Date(event.created_at).toLocaleString('hr-HR', { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
