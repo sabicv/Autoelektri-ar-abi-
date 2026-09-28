@@ -192,7 +192,7 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
   return (
     // min-w-0: a fieldset defaults to min-width: min-content, so one long
     // chip stretched every field past the card's edge on phones.
-    <fieldset disabled={locked} className="min-w-0 space-y-4">
+    <fieldset disabled={locked} className="min-w-0 space-y-4 disabled:opacity-60">
       {/* Battery drain — highlighted per spec, not buried among other fields */}
       <div className="flex items-center gap-3 rounded-xl border-2 border-electric-blue/30 bg-electric-blue/5 px-3 py-2.5 dark:border-electric-blue/40 dark:bg-electric-blue/10">
         <BatteryWarning className="h-5 w-5 flex-shrink-0 text-electric-blue" strokeWidth={2} />

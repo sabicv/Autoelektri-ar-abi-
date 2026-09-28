@@ -1,4 +1,5 @@
-import { FileText, Receipt } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, FileText, Receipt } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { formatEuroHR } from '@/lib/format';
 import { jobTotal } from '@/lib/finance';
@@ -48,19 +49,24 @@ export default async function InvoicesOverview({
   return (
     <div className="space-y-4">
       {/* Outstanding money is all-time on purpose — a debt doesn't expire with the period filter. */}
-      <Card className="flex items-center justify-between p-4">
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Neplaćeno ukupno ({unpaidCount})</p>
-        <p className="text-lg font-black text-amber-600 dark:text-amber-400">{formatEuroHR(unpaidTotal)}</p>
-      </Card>
+      <Link href={`${href('unpaid')}#racuni`} replace>
+        <Card hoverLift className="flex items-center justify-between gap-3 p-4">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Za naplatu ukupno ({unpaidCount})</p>
+          <p className="flex items-center gap-1 text-lg font-black text-amber-600 dark:text-amber-400">
+            {formatEuroHR(unpaidTotal)}
+            <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" strokeWidth={2} />
+          </p>
+        </Card>
+      </Link>
 
-      <section className="space-y-2">
+      <section id="racuni" className="scroll-mt-32 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-200">
             <Receipt className="h-4 w-4" strokeWidth={2} /> Računi
           </h2>
           <div className="flex gap-1.5">
             <FilterPill href={href('unpaid')} active={filter === 'unpaid'}>
-              Neplaćeno
+              Za naplatu
             </FilterPill>
             <FilterPill href={href('paid')} active={filter === 'paid'}>
               Plaćeno
@@ -71,7 +77,7 @@ export default async function InvoicesOverview({
           </div>
         </div>
         {jobs.length === 0 ? (
-          <EmptyState>{filter === 'unpaid' ? 'Nema neplaćenih naloga.' : 'Nema naloga s upisanom cijenom.'}</EmptyState>
+          <EmptyState>{filter === 'unpaid' ? 'Nema naloga za naplatu.' : 'Nema naloga s upisanom cijenom.'}</EmptyState>
         ) : (
           <JobList jobs={jobs} vehicles={vehicles} clients={clients} from="poslovanje" />
         )}

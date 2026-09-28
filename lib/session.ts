@@ -1,11 +1,14 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // For dashboard server components. Redirects instead of returning null so
-// callers can rely on `profile` being present.
-export async function getSessionProfile() {
+// callers can rely on `profile` being present. Cached per request: the
+// layout and the page both call it, and each call is two round trips to
+// Supabase (auth check + profile) that a page view only needs once.
+export const getSessionProfile = cache(async () => {
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -17,7 +20,7 @@ export async function getSessionProfile() {
   if (!profile) redirect('/login');
 
   return { supabase, user, profile };
-}
+});
 
 // Hiding a nav link isn't access control — every owner-only page calls this.
 export async function requireOwner() {

@@ -10,20 +10,25 @@ import { isClosedJob } from '@/lib/jobLifecycle';
 import { cn } from '@/lib/utils';
 import type { Job } from '@/types/database';
 
+type PaymentPatch = Pick<Job, 'payment_status' | 'paid_at'> & Partial<Pick<Job, 'confirmed_at'>>;
+
 interface PaymentStatusControlProps {
-  job: Pick<Job, 'id' | 'tenant_id' | 'status' | 'payment_status' | 'paid_at'>;
-  onChanged: (patch: Pick<Job, 'payment_status' | 'paid_at'>) => void;
+  job: Pick<Job, 'id' | 'tenant_id' | 'status' | 'payment_status' | 'paid_at' | 'confirmed_at'>;
+  onChanged: (patch: PaymentPatch) => void;
   onArchived?: () => void;
 }
 
-// One switch, both directions: amber Neplaćeno ⇄ green Plaćeno.
+// One switch, both directions: amber "Za naplatu" ⇄ green "Plaćeno".
 export default function PaymentStatusControl({ job, onChanged, onArchived }: PaymentStatusControlProps) {
   const [isSaving, setIsSaving] = useState(false);
   const isPaid = job.payment_status === 'PAID';
 
   async function toggle() {
-    const patch: Pick<Job, 'payment_status' | 'paid_at'> = isPaid
-      ? { payment_status: 'UNPAID', paid_at: null }
+    // Taking a payment back means the bill is being corrected, so a locked
+    // job reopens with it — otherwise labour and parts couldn't be edited.
+    const reopen = isPaid && job.confirmed_at !== null;
+    const patch: PaymentPatch = isPaid
+      ? { payment_status: 'UNPAID', paid_at: null, ...(reopen ? { confirmed_at: null } : {}) }
       : { payment_status: 'PAID', paid_at: new Date().toISOString() };
 
     setIsSaving(true);
@@ -41,14 +46,16 @@ export default function PaymentStatusControl({ job, onChanged, onArchived }: Pay
       job_id: job.id,
       event_type: 'PAYMENT_STATUS_CHANGED',
       actor: 'mechanic',
-      message: isPaid ? 'Nalog vraćen na neplaćeno.' : 'Nalog označen kao plaćen.',
-      metadata: { to: patch.payment_status },
+      message: isPaid
+        ? `Nalog vraćen na „Za naplatu“${reopen ? ' i otključan za ispravke' : ''}.`
+        : 'Nalog označen kao plaćen.',
+      metadata: { to: patch.payment_status, reopened: reopen },
     });
 
     setIsSaving(false);
     onChanged(patch);
     if (isPaid) {
-      toast.success('Vraćeno na neplaćeno.');
+      toast.success(reopen ? 'Vraćeno na „Za naplatu“ — nalog je otključan za ispravke.' : 'Vraćeno na „Za naplatu“.');
       return;
     }
     // A paid job gets its final PDF (with "PLAĆENO") filed automatically.

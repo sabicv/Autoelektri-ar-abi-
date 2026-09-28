@@ -15,6 +15,7 @@ import {
   KeyRound,
   LifeBuoy,
   Lock,
+  LockOpen,
   MoreHorizontal,
   Phone,
   Printer,
@@ -64,8 +65,9 @@ const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'PENDING_TRIAGE',
   'IN_DIAGNOSTIC',
   'PARASITIC_DRAIN_TESTING',
-  'IN_REPAIR',
+  // The usual order: parts are ordered and awaited before the repair starts.
   'WAITING_PARTS',
+  'IN_REPAIR',
   'FINISHED_AWAITING_PICKUP',
   'COLLECTED',
 ];
@@ -109,6 +111,7 @@ export default function JobDetailView({
   const [moreOpen, setMoreOpen] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -173,6 +176,34 @@ export default function JobDetailView({
         ? `${JOB_STATUS_LABELS_HR[newStatus]} — nalog je zatvoren${isOwner ? ' i premješten u Arhivu' : ''}.`
         : `Status: ${JOB_STATUS_LABELS_HR[newStatus]}`
     );
+  }
+
+  async function handleUnlock() {
+    setIsUnlocking(true);
+    const supabase = createBrowserSupabaseClient();
+    const { data, error } = await supabase
+      .from('jobs')
+      .update({ confirmed_at: null })
+      .eq('id', currentJob.id)
+      .select('*')
+      .single();
+    setIsUnlocking(false);
+
+    if (error || !data) {
+      toast.error('Otključavanje nije uspjelo.');
+      return;
+    }
+
+    await supabase.from('job_events').insert({
+      tenant_id: currentJob.tenant_id,
+      job_id: currentJob.id,
+      event_type: 'JOB_UNLOCKED',
+      actor: 'mechanic',
+      message: 'Nalog otključan za ispravke.',
+      metadata: {},
+    });
+    setCurrentJob(redactJobForRole(data, viewerRole));
+    toast.success('Nalog je otključan — možeš ga ispraviti.');
   }
 
   // Saves only the sections that actually changed. null = nothing to save.
@@ -446,6 +477,27 @@ export default function JobDetailView({
       >
         <JobHistoryTimeline events={events} />
       </CollapsibleCard>
+
+      {locked && (
+        // A locked job reads as locked — before, the fields just silently
+        // refused input. Only the owner can reopen it for corrections.
+        <div className="sticky bottom-0 z-20 -mx-4 flex items-center gap-3 border-t border-slate-200 bg-slate-50/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
+          <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+            <Lock className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} /> Nalog je zaključan
+          </p>
+          {isOwner && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="min-h-[52px] whitespace-nowrap px-5"
+              isLoading={isUnlocking}
+              onClick={handleUnlock}
+            >
+              <LockOpen className="h-4 w-4" strokeWidth={2} /> Otključaj
+            </Button>
+          )}
+        </div>
+      )}
 
       {!locked && (
         <div className="sticky bottom-0 z-20 -mx-4 flex gap-2 border-t border-slate-200 bg-slate-50/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">

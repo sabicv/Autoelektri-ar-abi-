@@ -14,7 +14,7 @@ export const JOB_STATUS_LABELS_HR: Record<JobStatus, string> = {
   IN_DIAGNOSTIC: 'U dijagnostici',
   PARASITIC_DRAIN_TESTING: 'Test pražnjenja / moduli',
   AWAITING_MODULE_REMAP: 'Test pražnjenja / moduli',
-  IN_REPAIR: 'Rad u tijeku',
+  IN_REPAIR: 'Popravak u tijeku',
   WAITING_PARTS: 'Čeka dijelove',
   FINISHED_AWAITING_PICKUP: 'Gotovo / spremno',
   COLLECTED: 'Preuzeto',
@@ -50,8 +50,10 @@ export function vocativeHR(firstName: string): string {
   return `${name}e`;
 }
 
+// Not "Neplaćeno": next to "Naplaćeno"/"Plaćeno" it's one letter away
+// and was misread in Poslovanje.
 export const PAYMENT_STATUS_LABELS_HR: Record<PaymentStatus, string> = {
-  UNPAID: 'Neplaćeno',
+  UNPAID: 'Za naplatu',
   PAID: 'Plaćeno',
 };
 

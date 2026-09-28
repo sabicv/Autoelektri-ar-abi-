@@ -72,7 +72,7 @@ const VoiceWorkLogger = forwardRef<SectionHandle, VoiceWorkLoggerProps>(function
   }));
 
   return (
-    <fieldset disabled={locked} className="min-w-0 space-y-2">
+    <fieldset disabled={locked} className="min-w-0 space-y-2 disabled:opacity-60">
       <div className="flex items-center justify-between">
         <label htmlFor="workSummary" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Opis izvedenih radova

@@ -18,6 +18,14 @@ export function jobBackLink(from: string | undefined): { href: string; label: st
   const uuid = /^[0-9a-f-]{36}$/i;
   if (from === 'arhiva') return { href: '/dashboard/archive', label: 'Natrag na arhivu' };
   if (from === 'poslovanje') return { href: '/dashboard/analytics', label: 'Natrag na poslovanje' };
+  // From one of Poslovanje's drill-down lists: back to that same list.
+  const drillDown = from?.match(/^poslovanje:(danas|7-dana|mjesec):(novi|zavrseni|uplate)$/);
+  if (drillDown) {
+    return {
+      href: `/dashboard/analytics?period=${drillDown[1]}&prikaz=${drillDown[2]}#popis`,
+      label: 'Natrag na poslovanje',
+    };
+  }
   if (from?.startsWith('musterija:') && uuid.test(from.slice(10))) {
     return { href: `/dashboard/clients/${from.slice(10)}`, label: 'Natrag na mušteriju' };
   }
