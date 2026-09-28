@@ -343,6 +343,7 @@ export default function JobDetailView({
           jobId={currentJob.id}
           tenantId={currentJob.tenant_id}
           initialDiagnosticNotes={currentJob.diagnostic_notes}
+          symptoms={currentJob.symptoms}
           locked={locked}
           onSaved={(notes) => setCurrentJob((prev) => ({ ...prev, diagnostic_notes: notes }))}
         />

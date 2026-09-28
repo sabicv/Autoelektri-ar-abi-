@@ -6,6 +6,7 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal } from '@/lib/finance';
+import { findDtcCode } from '@/lib/dtc-codes';
 import type { Client, Job, Tenant, Vehicle } from '@/types/database';
 
 // A4 in PDF points.
@@ -134,7 +135,12 @@ export async function buildWorkOrderPdf({ tenant, client, vehicle, job, dtcCodes
   }
 
   section('Status', JOB_STATUS_LABELS_HR[job.status]);
-  if (dtcCodes.length > 0) section('DTC kodovi', dtcCodes.join(', '));
+  if (dtcCodes.length > 0) {
+    section(
+      'DTC kodovi',
+      dtcCodes.map((code) => [code, findDtcCode(code)?.description].filter(Boolean).join(' – ')).join('\n')
+    );
+  }
   if (job.diagnostic_notes) section('Dijagnostika', job.diagnostic_notes);
   if (job.work_summary) section('Izvedeni radovi', job.work_summary);
 

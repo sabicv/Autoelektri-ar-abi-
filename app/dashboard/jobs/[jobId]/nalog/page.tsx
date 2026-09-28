@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getSessionProfile } from '@/lib/session';
 import { formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal } from '@/lib/finance';
+import { findDtcCode } from '@/lib/dtc-codes';
 import PrintButton from '@/components/dashboard/PrintButton';
 import ArchivePdfButton from '@/components/dashboard/ArchivePdfButton';
 import type { DiagnosticReport } from '@/types/database';
@@ -84,7 +85,17 @@ export default async function WorkOrderPage({ params }: PageProps) {
         {dtcCodes.length > 0 && (
           <div className="mt-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">DTC kodovi</p>
-            <p className="mt-1 font-mono text-sm">{dtcCodes.join(', ')}</p>
+            <ul className="mt-1 space-y-0.5 text-sm">
+              {dtcCodes.map((code) => {
+                const known = findDtcCode(code);
+                return (
+                  <li key={code}>
+                    <span className="font-mono font-semibold">{code}</span>
+                    {known && <span className="text-slate-600"> – {known.description}</span>}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
 
