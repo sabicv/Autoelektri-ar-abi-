@@ -22,11 +22,12 @@ export function ArchiveRow({
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-electric-blue/10 dark:text-electric-blue">
           {icon}
         </div>
+        {/* Meta sits under the title, not beside it — side-by-side squeezed the title to nothing on phones. */}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{title}</p>
           {subtitle && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          {meta && <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{meta}</div>}
         </div>
-        {meta && <div className="flex flex-shrink-0 flex-col items-end gap-1">{meta}</div>}
         <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
       </Card>
     </Link>

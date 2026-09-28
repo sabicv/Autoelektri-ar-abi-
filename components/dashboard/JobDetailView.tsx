@@ -17,7 +17,6 @@ import {
   Phone,
   Printer,
   RefreshCw,
-  Save,
   Stethoscope,
   User,
   Wrench,
@@ -362,11 +361,25 @@ export default function JobDetailView({ job, client, vehicle, events, viewerRole
 
       {!locked && (
         <div className="sticky bottom-0 z-20 -mx-4 flex gap-2 border-t border-slate-200 bg-slate-50/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
-          <Button variant="primary" className="flex-1" isLoading={isSaving} disabled={isConfirming} onClick={handleSave}>
-            {!isSaving && <Save className="h-5 w-5" strokeWidth={2} />} Spremi promjene
+          <Button
+            variant="primary"
+            size="sm"
+            className="min-h-[52px] flex-1 whitespace-nowrap"
+            isLoading={isSaving}
+            disabled={isConfirming}
+            onClick={handleSave}
+          >
+            Spremi promjene
           </Button>
-          <Button variant="secondary" className="flex-1" isLoading={isConfirming} disabled={isSaving} onClick={handleConfirm}>
-            {!isConfirming && <Lock className="h-5 w-5" strokeWidth={2} />} Zaključaj nalog
+          <Button
+            variant="secondary"
+            size="sm"
+            className="min-h-[52px] flex-1 whitespace-nowrap"
+            isLoading={isConfirming}
+            disabled={isSaving}
+            onClick={handleConfirm}
+          >
+            Zaključaj nalog
           </Button>
         </div>
       )}
