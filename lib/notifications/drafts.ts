@@ -1,12 +1,11 @@
-import { formatEuroHR } from '@/lib/format';
+import { formatEuroHR, vocativeHR } from '@/lib/format';
 
-// Deterministic Croatian message templates. Intentionally not LLM-generated:
-// these are structured notifications (price, defect, status) where a
-// human-reviewed, predictable draft is safer than free-form generation —
-// the mechanic still edits and approves every word before anything sends.
+// Deterministic Croatian message drafts. Intentionally not LLM-generated:
+// these carry prices and defects, so a predictable draft is safer — the
+// mechanic still edits and approves every word before anything sends.
 //
-// No parking-fee or penalty language anywhere here by design — client
-// communication stays informative and professional, not fee-threatening.
+// Tone: standard Croatian, warm and direct, "ti" form — like a trusted
+// local workshop, not a corporation. No slang, no dialect, no fee threats.
 
 export function draftJobFinishedMessage(params: {
   clientFirstName: string;
@@ -14,8 +13,8 @@ export function draftJobFinishedMessage(params: {
   totalAmount: number;
 }): string {
   return (
-    `Pozdrav ${params.clientFirstName}, dijagnostika i radovi na vozilu ${params.vehicleLabel} su završeni. ` +
-    `Ukupno za platiti: ${formatEuroHR(params.totalAmount)}. Vozilo vas čeka na preuzimanje, javite nam se za dogovor.`
+    `Bok ${vocativeHR(params.clientFirstName)}, radovi na tvom vozilu ${params.vehicleLabel} su gotovi i auto te čeka. ` +
+    `Ukupno: ${formatEuroHR(params.totalAmount)}. Javi kad ti odgovara doći po njega.`
   );
 }
 
@@ -26,8 +25,8 @@ export function draftDiagnosticCompleteMessage(params: {
 }): string {
   const fault = params.faultSummary?.trim();
   return (
-    `Pozdrav ${params.clientFirstName}, dijagnostika na vašem vozilu ${params.vehicleLabel} je završena, ` +
-    `${fault ? `kvar je lociran: ${fault}.` : 'kvar je lociran.'} Možete nas kontaktirati za detalje.`
+    `Bok ${vocativeHR(params.clientFirstName)}, dijagnostika na tvom vozilu ${params.vehicleLabel} je gotova. ` +
+    `${fault ? `Pronašli smo: ${fault}.` : 'Pronašli smo što je problem.'} Javi se pa ti objasnimo što dalje.`
   );
 }
 
@@ -38,8 +37,7 @@ export function draftUpsellMessage(params: {
   price: number;
 }): string {
   return (
-    `Pozdrav ${params.clientFirstName}, tijekom dijagnostike na vozilu ${params.vehicleLabel} pronašli smo dodatni kvar: ` +
-    `${params.defectDescription}. Cijena popravka: ${formatEuroHR(params.price)}. ` +
-    `Molimo potvrdite želite li da nastavimo sa zahvatom.`
+    `Bok ${vocativeHR(params.clientFirstName)}, dok smo radili na tvom vozilu ${params.vehicleLabel}, našli smo još jedan kvar: ` +
+    `${params.defectDescription}. Popravak bi koštao ${formatEuroHR(params.price)}. Da ga odmah riješimo?`
   );
 }

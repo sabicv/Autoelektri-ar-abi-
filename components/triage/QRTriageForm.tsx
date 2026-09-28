@@ -148,13 +148,13 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
       const json = await response.json();
 
       if (!response.ok) {
-        setSubmitError(json.error ?? 'Došlo je do greške. Pokušajte ponovno.');
+        setSubmitError(json.error ?? 'Nešto je pošlo po krivu. Pokušaj ponovno.');
         return;
       }
 
       setResult(json as SubmissionResult);
     } catch {
-      setSubmitError('Nije moguće poslati prijavu. Provjerite internetsku vezu.');
+      setSubmitError('Prijava nije poslana. Provjeri internetsku vezu.');
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +181,7 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
       {/* Customer info */}
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
-          <User className="h-5 w-5 text-blue-600" /> Vaši podaci
+          <User className="h-5 w-5 text-blue-600" /> Tvoji podaci
         </h2>
 
         <Field label="Ime" htmlFor="firstName" error={errors.firstName}>
@@ -320,7 +320,7 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
           tenantId={tenant.id}
           tag="INTAKE_CONDITION"
           label="Stanje vozila"
-          hint="Slikajte vozilo s vanjske strane (sve 4 strane ako je moguće)."
+          hint="Slikaj auto sa svih strana, ako možeš."
           maxFiles={4}
           photos={intakePhotos}
           onChange={setIntakePhotos}
@@ -330,7 +330,7 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
           tenantId={tenant.id}
           tag="REGISTRATION_CARD"
           label="Prometna dozvola"
-          hint="Slikajte prometnu dozvolu radi lakše identifikacije vozila."
+          hint="Slikaj prometnu — tako brže prepoznamo vozilo."
           maxFiles={2}
           photos={registrationPhotos}
           onChange={setRegistrationPhotos}
@@ -340,7 +340,7 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
       {/* Symptoms */}
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
-          <Wrench className="h-5 w-5 text-blue-600" /> Opišite kvar
+          <Wrench className="h-5 w-5 text-blue-600" /> Opiši kvar
         </h2>
 
         {errors.symptoms && (
@@ -453,9 +453,9 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
               <div className="mt-2 rounded-xl border border-red-200 bg-red-50/60 p-3 text-xs text-red-800">
                 <p className="font-semibold">Pregled troška hitnog prijema</p>
                 <p className="mt-1 text-red-700">
-                  Uobičajena cijena dijagnostike uvećava se za{' '}
-                  <strong>{tenant.emergency_surcharge_percent % 1 === 0 ? tenant.emergency_surcharge_percent : tenant.emergency_surcharge_percent.toFixed(1)}%</strong> zbog
-                  prioritetne obrade. Konačan iznos potvrđuje mehaničar nakon pregleda vozila.
+                  Dijagnostika je skuplja za{' '}
+                  <strong>{tenant.emergency_surcharge_percent % 1 === 0 ? tenant.emergency_surcharge_percent : tenant.emergency_surcharge_percent.toFixed(1)}%</strong> jer tvoje vozilo ide
+                  preko reda. Konačnu cijenu javit će ti mehaničar kad pogleda auto.
                 </p>
               </div>
             </motion.div>

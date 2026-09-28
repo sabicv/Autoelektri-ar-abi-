@@ -48,8 +48,8 @@ export default function TriageSuccessReceipt({
   }, [jobReference]);
 
   const waitLabel = isEmergency
-    ? 'Hitni prijem — javljamo vam se u najkraćem mogućem roku, danas.'
-    : 'Uobičajeno vrijeme čekanja: 1–2 radna dana. Javit ćemo vam se čim mehaničar pregleda vozilo.';
+    ? 'Hitni prijem — javit ćemo ti se još danas.'
+    : 'Obično se javimo u 1–2 radna dana, čim mehaničar pogleda auto.';
 
   const whatsappNumber = tenant.phone ? tenant.phone.replace(/[^0-9]/g, '') : null;
 
@@ -65,9 +65,9 @@ export default function TriageSuccessReceipt({
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <h1 className="text-2xl font-bold text-slate-900">Prijava zaprimljena!</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Hvala, prijava je stigla!</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {tenant.name} je zaprimio vaš zahtjev. Sačuvajte šifru prijave ispod.
+          Tvoja prijava je stigla u {tenant.name}. Spremi šifru prijave ispod.
         </p>
       </motion.div>
 
@@ -112,8 +112,8 @@ export default function TriageSuccessReceipt({
       >
         <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={2} />
         <p className="text-sm text-slate-700">
-          Besplatno parkiranje {tenant.freeParkingDays} dana nakon završetka radova, nakon čega se
-          obračunava ležarina od {formatEuro(tenant.dailyParkingFee)}/dan.
+          Parkiranje je besplatno {tenant.freeParkingDays} dana nakon završetka radova, a nakon toga ležarina je
+          {formatEuro(tenant.dailyParkingFee)}/dan.
         </p>
       </motion.div>
 

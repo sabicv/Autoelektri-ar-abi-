@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AlertCircle, KeyRound, Loader2, RefreshCw, Send, X } from 'lucide-react';
+import { vocativeHR } from '@/lib/format';
 
 interface SmartLockboxModalProps {
   open: boolean;
@@ -22,7 +23,7 @@ function generateSecurePin(): string {
 }
 
 function buildLockboxMessage(clientFirstName: string, pin: string): string {
-  return `Pozdrav ${clientFirstName}! Vaši ključevi nalaze se u sefu na ulazu. Vaš PIN za preuzimanje je: ${pin}. Hvala na povjerenju!`;
+  return `Bok ${vocativeHR(clientFirstName)}! Ključevi su ti u sefu na ulazu, PIN za otvaranje je ${pin}. Hvala ti i sretna vožnja!`;
 }
 
 export default function SmartLockboxModal({ open, onClose, job, onSent }: SmartLockboxModalProps) {

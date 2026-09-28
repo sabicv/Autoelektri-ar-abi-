@@ -45,17 +45,17 @@ const currentYear = new Date().getFullYear();
 
 export const triageFormSchema = z.object({
   tenantSlug: z.string().min(1),
-  firstName: z.string().trim().min(2, 'Unesite ime (najmanje 2 znaka).').max(80),
-  lastName: z.string().trim().min(2, 'Unesite prezime (najmanje 2 znaka).').max(80),
+  firstName: z.string().trim().min(2, 'Upiši ime (barem 2 slova).').max(80),
+  lastName: z.string().trim().min(2, 'Upiši prezime (barem 2 slova).').max(80),
   countryCode: z.string().min(2).max(4),
   phoneNumber: z
     .string()
     .trim()
-    .regex(/^[0-9]{6,12}$/, 'Unesite ispravan broj telefona (samo brojevi, bez pozivnog).'),
+    .regex(/^[0-9]{6,12}$/, 'Upiši broj telefona, samo brojke i bez pozivnog.'),
   registrationPlate: z
     .string()
     .trim()
-    .min(4, 'Unesite registarsku oznaku.')
+    .min(4, 'Upiši registraciju.')
     .max(15, 'Registarska oznaka je predugačka.')
     .transform((value) => value.toUpperCase()),
   make: z.string().trim().max(60).optional(),
@@ -63,8 +63,8 @@ export const triageFormSchema = z.object({
   year: z
     .number()
     .int()
-    .min(1900, 'Unesite ispravnu godinu proizvodnje.')
-    .max(currentYear + 1, 'Unesite ispravnu godinu proizvodnje.')
+    .min(1900, 'Provjeri godinu proizvodnje.')
+    .max(currentYear + 1, 'Provjeri godinu proizvodnje.')
     .optional(),
   vin: z
     .string()
@@ -72,7 +72,7 @@ export const triageFormSchema = z.object({
     .max(17, 'VIN ima najviše 17 znakova.')
     .optional()
     .transform((value) => (value ? value.toUpperCase() : value)),
-  symptoms: z.array(z.enum(SYMPTOM_CODES)).min(1, 'Odaberite barem jedan simptom.'),
+  symptoms: z.array(z.enum(SYMPTOM_CODES)).min(1, 'Odaberi barem jedan simptom.'),
   description: z.string().trim().max(2000, 'Opis je predugačak.').optional(),
   isEmergency: z.boolean(),
   photos: z

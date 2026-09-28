@@ -77,7 +77,11 @@ Zaključanoj radionici djelatnici vide samo poruku o zaustavljenom pristupu; pod
 ## 4. Integracije (opcionalno, po potrebi)
 
 - **Vapi.ai (telefonija):** u Vapi dashboardu postavite Server URL asistenta na `https://vasa-domena.com/api/telephony/incoming-call`, kopirajte "Server URL Secret" u `VAPI_SERVER_SECRET`, a ID postojećeg asistenta u `VAPI_ASSISTANT_ID`. Broj telefona kupljen u Vapiju treba upisati u `tenants.vapi_phone_number_id` (njegov Vapi resource id) da bi sustav znao kojem tenantu poziv pripada.
-- **Meta WhatsApp Cloud API:** u Meta App Dashboardu potrebni su `WHATSAPP_ACCESS_TOKEN` (permanent token), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (za provjeru potpisa webhooka) i `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (proizvoljan string koji upišete i u Meta i u `.env`). Webhook URL: `https://vasa-domena.com/api/notifications/webhook`. Predlošci poruka (`job_finished_notice`, `upsell_request`, `parking_warning`) moraju biti unaprijed odobreni u Meta Business Manageru — imena predložaka su konfigurabilna preko `WHATSAPP_TEMPLATE_*` varijabli.
+- **Meta WhatsApp Cloud API:** u Meta App Dashboardu potrebni su `WHATSAPP_ACCESS_TOKEN` (permanent token), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (za provjeru potpisa webhooka) i `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (proizvoljan string koji upišete i u Meta i u `.env`). Webhook URL: `https://vasa-domena.com/api/notifications/webhook`. Predlošci poruka (`job_finished_notice`, `diagnostic_complete`, `upsell_request`) moraju biti unaprijed odobreni u Meta Business Manageru — imena predložaka su konfigurabilna preko `WHATSAPP_TEMPLATE_*` varijabli. Tekst predloška određuje se u Metinom sučelju, ne u kodu; aplikacija šalje samo vrijednosti `{{1}}`, `{{2}}`…, a `{{1}}` je uvijek ime u vokativu ("Ivane"). Preporučeni tekstovi (topao, izravan ton, obraćanje s "ti"):
+
+  - `job_finished_notice`: *Bok {{1}}, radovi na tvom vozilu {{2}} su gotovi i auto te čeka. Ukupno: {{3}}. Javi kad ti odgovara doći po njega.*
+  - `diagnostic_complete`: *Bok {{1}}, dijagnostika na tvom vozilu {{2}} je gotova. Pronašli smo: {{3}}. Javi se pa ti objasnimo što dalje.*
+  - `upsell_request`: *Bok {{1}}, dok smo radili na tvom vozilu {{2}}, našli smo još jedan kvar: {{3}}. Popravak bi koštao {{4}}. Da ga odmah riješimo?* (gumbi: "Može" / "Ne sada")
 
 ## 5. Deployment
 

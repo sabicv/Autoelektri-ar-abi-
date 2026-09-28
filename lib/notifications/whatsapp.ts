@@ -2,7 +2,7 @@ import 'server-only';
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatEuroHR, vehicleLabel } from '@/lib/format';
+import { formatEuroHR, vehicleLabel, vocativeHR } from '@/lib/format';
 import type { Client, Job, Tenant, Vehicle } from '@/types/database';
 
 // =====================================================================
@@ -151,7 +151,7 @@ export async function sendJobFinishedNotification(
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: client.first_name },
+            { type: 'text', text: vocativeHR(client.first_name) },
             { type: 'text', text: vehicleLabel(vehicle) },
             { type: 'text', text: formatEuroHR(totalAmount) },
           ],
@@ -197,7 +197,7 @@ export async function sendDiagnosticCompleteNotification(
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: client.first_name },
+            { type: 'text', text: vocativeHR(client.first_name) },
             { type: 'text', text: vehicleLabel(vehicle) },
             { type: 'text', text: faultSummary || 'kvar je lociran' },
           ],
@@ -278,7 +278,7 @@ export async function sendUpsellRequest(
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: client.first_name },
+            { type: 'text', text: vocativeHR(client.first_name) },
             { type: 'text', text: vehicleLabel(vehicle) },
             { type: 'text', text: defectDescription },
             { type: 'text', text: formatEuroHR(price) },

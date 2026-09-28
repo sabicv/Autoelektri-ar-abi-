@@ -72,7 +72,7 @@ function buildAssistantResponse(firstMessage: string, systemPrompt: string) {
 }
 
 function genericReceptionPrompt(tenantName: string): string {
-  return `Ti si AI recepcioner za "${tenantName}", auto-električarsku radionicu. Razgovaraj isključivo na hrvatskom jeziku, kratko, ljubazno i profesionalno. Ovo je nepoznat pozivatelj bez povijesti u sustavu. Zatraži ime, registarsku oznaku vozila i kratki opis kvara, te ponudi dolazak u radionicu ili dogovor termina. Ne izmišljaj podatke o cijenama ili dijagnozama.`;
+  return `Ti si AI recepcioner za "${tenantName}", auto-električarsku radionicu. Razgovaraj isključivo na standardnom hrvatskom jeziku, kratko, toplo i izravno: obraćaj se pozivatelju s "ti", bez korporativnih fraza, žargona i dijalekta. Ovo je nepoznat pozivatelj bez povijesti u sustavu. Zatraži ime, registarsku oznaku vozila i kratki opis kvara, te ponudi dolazak u radionicu ili dogovor termina. Ne izmišljaj podatke o cijenama ili dijagnozama.`;
 }
 
 function compileKnownCallerPrompt(params: {
@@ -86,7 +86,7 @@ function compileKnownCallerPrompt(params: {
   activeJob: Job | null;
 }): string {
   const lines: string[] = [
-    `Ti si AI recepcioner za "${params.tenantName}", auto-električarsku radionicu. Razgovaraj isključivo na hrvatskom jeziku, ljubazno i profesionalno.`,
+    `Ti si AI recepcioner za "${params.tenantName}", auto-električarsku radionicu. Razgovaraj isključivo na standardnom hrvatskom jeziku, toplo i izravno: obraćaj se pozivatelju s "ti" i imenom, bez korporativnih fraza, žargona i dijalekta.`,
     '',
     'PODACI O POZIVATELJU (iz baze, koristi ih, ne izmišljaj druge):',
     `- Ime i prezime: ${params.clientFirstName} ${params.clientLastName}`,

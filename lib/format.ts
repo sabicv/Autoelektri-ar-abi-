@@ -29,6 +29,20 @@ export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {
   DOCUMENT: 'Dokument',
 };
 
+// Vocative for a friendly "Bok Ivane". Vowel-ending names (Ana, Luka,
+// Stipe) don't change; consonant-ending male names take -e, with the
+// common k→če and j→ju shifts (Dominik → Dominiče, Matej → Mateju).
+// Messages are always reviewed before sending, so rare misses get fixed.
+export function vocativeHR(firstName: string): string {
+  const name = firstName.trim();
+  if (!name) return name;
+  const last = name.slice(-1).toLowerCase();
+  if ('aeiou'.includes(last)) return name;
+  if (last === 'k') return `${name.slice(0, -1)}če`;
+  if (last === 'j') return `${name}u`;
+  return `${name}e`;
+}
+
 export const PAYMENT_STATUS_LABELS_HR: Record<PaymentStatus, string> = {
   UNPAID: 'Neplaćeno',
   PAID: 'Plaćeno',
