@@ -14,12 +14,14 @@ import {
   MoreVertical,
   Moon,
   Settings,
+  Smartphone,
   Sun,
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { enablePush, isPushEnabled, pushSupported } from '@/lib/pushClient';
+import { canPromptInstall, INSTALL_READY_EVENT, isIOS, isStandalone, promptInstall, syncThemeColor } from '@/lib/pwa';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import TenantLogo from '@/components/ui/TenantLogo';
 import { cn } from '@/lib/utils';
@@ -60,11 +62,40 @@ export default function DashboardNav({
   const [fontScaleIndex, setFontScaleIndex] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [pushState, setPushState] = useState<'unsupported' | 'off' | 'on' | 'working'>('unsupported');
+  // 'installed' hides the item; 'prompt' = Chrome's own install dialog;
+  // 'ios' / 'manual' = say where the browser keeps "Add to home screen".
+  const [installState, setInstallState] = useState<'installed' | 'prompt' | 'ios' | 'manual'>('installed');
+  const [installHelpOpen, setInstallHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!pushSupported()) return;
     isPushEnabled().then((enabled) => setPushState(enabled ? 'on' : 'off'));
   }, []);
+
+  useEffect(() => {
+    const update = () =>
+      setInstallState(isStandalone() ? 'installed' : canPromptInstall() ? 'prompt' : isIOS() ? 'ios' : 'manual');
+    update();
+    window.addEventListener(INSTALL_READY_EVENT, update);
+    window.addEventListener('appinstalled', update);
+    return () => {
+      window.removeEventListener(INSTALL_READY_EVENT, update);
+      window.removeEventListener('appinstalled', update);
+    };
+  }, []);
+
+  async function handleInstall() {
+    if (installState !== 'prompt') {
+      setInstallHelpOpen((open) => !open);
+      return;
+    }
+    const accepted = await promptInstall();
+    setInstallState(canPromptInstall() ? 'prompt' : isIOS() ? 'ios' : 'manual');
+    if (accepted) {
+      setMoreOpen(false);
+      toast.success('Aplikacija je instalirana — otvori je ikonom na početnom zaslonu.');
+    }
+  }
 
   async function handleEnablePush() {
     setPushState('working');
@@ -98,6 +129,7 @@ export default function DashboardNav({
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle('dark', next);
+    syncThemeColor();
     try {
       localStorage.setItem('workshop-theme', next ? 'dark' : 'light');
     } catch {
@@ -124,7 +156,8 @@ export default function DashboardNav({
   }
 
   return (
-    <header className="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
+    // Top padding: installed on an iPhone the app runs under the status bar.
+    <header className="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-workshop-border dark:bg-workshop-dark/95">
       <div className="flex items-center justify-between gap-2 px-4 py-2.5">
         <Link href="/dashboard/jobs" className="flex min-w-0 items-center gap-2.5">
           <TenantLogo name={tenantName} logoUrl={logoUrl} />
@@ -180,6 +213,34 @@ export default function DashboardNav({
                   Postavke radionice i djelatnici
                 </Link>
                 <div className="my-1 border-t border-slate-100 dark:border-workshop-border" />
+              </>
+            )}
+
+            {installState !== 'installed' && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+                >
+                  <Smartphone className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+                  Instaliraj aplikaciju na mobitel
+                </button>
+                {installHelpOpen && (
+                  <p className="mx-3 mb-2 rounded-xl bg-blue-50 p-3 text-sm leading-relaxed text-slate-700 dark:bg-electric-blue/10 dark:text-slate-200">
+                    {installState === 'ios' ? (
+                      <>
+                        U Safariju dodirni <strong>Dijeli</strong> (kvadrat sa strelicom prema gore), zatim{' '}
+                        <strong>Dodaj na početni zaslon</strong>.
+                      </>
+                    ) : (
+                      <>
+                        U izborniku preglednika (<strong>⋮</strong> gore desno) odaberi <strong>Instaliraj aplikaciju</strong>{' '}
+                        ili <strong>Dodaj na početni zaslon</strong>.
+                      </>
+                    )}
+                  </p>
+                )}
               </>
             )}
 

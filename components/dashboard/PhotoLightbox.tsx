@@ -106,7 +106,7 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex flex-col bg-black"
+        className="fixed inset-0 z-[100] flex flex-col bg-black pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
       >
         <div className="flex items-center justify-between px-4 py-3 text-white">
           <div className="min-w-0">
