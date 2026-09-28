@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Car, CheckCircle2, ClipboardList, Hand, LifeBuoy, Plus, Reply, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { updateTaskStatus } from '@/lib/taskStatus';
 import { useSignedUrls } from '@/lib/useSignedUrls';
 import { cn } from '@/lib/utils';
 import type { MechanicTask, StaffRole, TaskStatus } from '@/types/database';
@@ -14,8 +15,15 @@ import type { StaffOption } from './TaskComposer';
 
 const TaskComposer = dynamic(() => import('./TaskComposer'), { ssr: false });
 
-const TASK_STATUS_HR: Record<TaskStatus, string> = { PENDING: 'Novo', IN_PROGRESS: 'U radu', DONE: 'Gotovo' };
+const TASK_STATUS_HR: Record<TaskStatus, string> = { PENDING: 'Novo', IN_PROGRESS: 'Preuzeto', DONE: 'Gotovo' };
 const HELP_STATUS_HR: Record<TaskStatus, string> = { PENDING: 'Čeka odgovor', IN_PROGRESS: 'U tijeku', DONE: 'Riješeno' };
+const STATUS_PILL: Record<TaskStatus, string> = {
+  PENDING: 'bg-slate-100 text-slate-700 dark:bg-workshop-surface-hover dark:text-slate-200',
+  IN_PROGRESS: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+  DONE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+};
+
+const timeHR = (iso: string) => new Date(iso).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
 
 const DONE_VISIBLE_MS = 12 * 60 * 60 * 1000;
 
@@ -34,6 +42,9 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
   const [composer, setComposer] = useState<{ replyTo?: MechanicTask } | null>(null);
   const staffNames = useMemo(() => new Map(staff.map((s) => [s.id, s.name])), [staff]);
   const receivers = useMemo(() => staff.filter((s) => s.id !== currentUserId), [staff, currentUserId]);
+  // Realtime UPDATEs carry only the new row; the previous status comes from here.
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -47,11 +58,24 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
         return;
       }
       const task = payload.new;
+      const previous = tasksRef.current.find((t) => t.id === task.id);
       setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev.map((t) => (t.id === task.id ? task : t)) : [task, ...prev]));
       const addressedToMe = task.receiver_id === currentUserId || (isOwner && task.kind === 'HELP' && task.sender_id !== currentUserId);
       if (payload.eventType === 'INSERT' && addressedToMe) {
         navigator.vibrate?.([200, 100, 200]);
         toast(task.kind === 'HELP' ? 'Trebam pomoć' : 'Novi zadatak', { description: task.message_text });
+      }
+
+      // The sender hears back when the other side moves their message along.
+      const movedByOther = payload.eventType === 'UPDATE' && previous && previous.status !== task.status;
+      if (movedByOther && task.sender_id === currentUserId) {
+        const receiver = task.receiver_id ? staffNames.get(task.receiver_id) : null;
+        const title =
+          task.kind === 'HELP'
+            ? 'Zahtjev za pomoć riješen'
+            : `${task.status === 'DONE' ? 'Zadatak gotov' : 'Zadatak preuzet'}${receiver ? ` — ${receiver}` : ''}`;
+        navigator.vibrate?.(150);
+        toast.success(title, { description: task.message_text });
       }
     };
 
@@ -68,7 +92,7 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOwner, tenantId, currentUserId]);
+  }, [isOwner, tenantId, currentUserId, staffNames]);
 
   const visible = useMemo(() => {
     const cutoff = Date.now() - DONE_VISIBLE_MS;
@@ -83,25 +107,19 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
 
   const photoUrls = useSignedUrls(visible.flatMap((t) => (t.photo_path ? [t.photo_path] : [])));
 
-  async function setStatus(task: MechanicTask, status: TaskStatus) {
-    const previous = task.status;
-    const updatedAt = new Date().toISOString();
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status, updated_at: updatedAt } : t)));
-    const { error } = await createBrowserSupabaseClient()
-      .from('mechanic_tasks')
-      .update({ status, updated_at: updatedAt })
-      .eq('id', task.id);
-    if (error) {
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: previous } : t)));
-      toast.error('Promjena nije spremljena. Provjerite vezu.');
-    }
+  async function setStatus(task: MechanicTask, status: Exclude<TaskStatus, 'PENDING'>) {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status, updated_at: new Date().toISOString() } : t)));
+    const saved = await updateTaskStatus(task.id, status);
+    // Either way the list shows what the database actually holds.
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? (saved ?? task) : t)));
+    if (!saved) toast.error('Promjena nije spremljena. Osvježite stranicu i pokušajte ponovno.');
   }
 
   async function remove(task: MechanicTask) {
     if (!window.confirm('Obrisati zadatak?')) return;
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
-    const { error } = await createBrowserSupabaseClient().from('mechanic_tasks').delete().eq('id', task.id);
-    if (error) {
+    const { data, error } = await createBrowserSupabaseClient().from('mechanic_tasks').delete().eq('id', task.id).select('id');
+    if (error || !data?.length) {
       setTasks((prev) => [task, ...prev]);
       toast.error('Brisanje nije uspjelo.');
     }
@@ -135,9 +153,12 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
             const isHelp = task.kind === 'HELP';
             const sender = task.sender_id ? staffNames.get(task.sender_id) : null;
             const receiver = task.receiver_id ? staffNames.get(task.receiver_id) : null;
-            const who = isHelp ? sender : isOwner ? (receiver ? `→ ${receiver}` : null) : sender;
+            // Whoever else is involved: the sender for what came to me, the
+            // receiver for what I sent.
+            const who = task.sender_id === currentUserId ? receiver : sender ? `od: ${sender}` : null;
             const photoUrl = task.photo_path ? photoUrls[task.photo_path] : undefined;
-            const canAct = !done && (task.receiver_id === currentUserId || isOwner);
+            // Only the person a task was sent to takes it and finishes it.
+            const canAct = !done && task.receiver_id === currentUserId;
 
             return (
               <li
@@ -185,10 +206,13 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
                   )}
                 </div>
 
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-300">
-                  <span className="font-semibold">{(isHelp ? HELP_STATUS_HR : TASK_STATUS_HR)[task.status]}</span>
-                  {who && <span>{who}</span>}
-                  <span>{new Date(task.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-300">
+                  <span className={cn('rounded-md px-2 py-0.5 font-bold', STATUS_PILL[task.status])}>
+                    {(isHelp ? HELP_STATUS_HR : TASK_STATUS_HR)[task.status]}
+                    {task.status !== 'PENDING' && ` ${timeHR(task.updated_at)}`}
+                  </span>
+                  {who && <span className="font-semibold">{who}</span>}
+                  <span>poslano {timeHR(task.created_at)}</span>
                   {task.job_id && (
                     <Link
                       href={`/dashboard/jobs/${task.job_id}`}

@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { LifeBuoy, MessagesSquare, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { updateTaskStatus } from '@/lib/taskStatus';
 import { useSignedUrls } from '@/lib/useSignedUrls';
 import { cn } from '@/lib/utils';
 import type { MechanicTask, StaffRole } from '@/types/database';
@@ -33,7 +33,7 @@ function kindLabel(m: MechanicTask) {
 
 function statusLabel(m: MechanicTask) {
   if (m.kind === 'HELP') return m.status === 'DONE' ? 'riješeno' : 'otvoreno';
-  return { PENDING: 'novo', IN_PROGRESS: 'u radu', DONE: 'gotovo' }[m.status];
+  return { PENDING: 'novo', IN_PROGRESS: 'preuzeto', DONE: 'gotovo' }[m.status];
 }
 
 // The job's internal record: every task, help request and reply, oldest
@@ -57,16 +57,12 @@ export default function JobMessages({
   const openHelp = messages.filter((m) => m.kind === 'HELP' && m.status !== 'DONE').length;
 
   async function resolve(help: MechanicTask) {
-    const updatedAt = new Date().toISOString();
-    const { error } = await createBrowserSupabaseClient()
-      .from('mechanic_tasks')
-      .update({ status: 'DONE', updated_at: updatedAt })
-      .eq('id', help.id);
-    if (error) {
+    const saved = await updateTaskStatus(help.id, 'DONE');
+    if (!saved) {
       toast.error('Promjena nije spremljena.');
       return;
     }
-    onMessagesChange(messages.map((m) => (m.id === help.id ? { ...m, status: 'DONE', updated_at: updatedAt } : m)));
+    onMessagesChange(messages.map((m) => (m.id === help.id ? saved : m)));
   }
 
   if (messages.length === 0) return null;
@@ -154,11 +150,7 @@ export default function JobMessages({
               ...messages.map((m) => (m.id === replyTo.id ? { ...m, status: 'DONE' as const, updated_at: updatedAt } : m)),
               task,
             ]);
-            createBrowserSupabaseClient()
-              .from('mechanic_tasks')
-              .update({ status: 'DONE', updated_at: updatedAt })
-              .eq('id', replyTo.id)
-              .then(({ error }) => error && toast.error('Zahtjev nije označen kao riješen.'));
+            updateTaskStatus(replyTo.id, 'DONE').then((saved) => !saved && toast.error('Zahtjev nije označen kao riješen.'));
           }}
         />
       )}

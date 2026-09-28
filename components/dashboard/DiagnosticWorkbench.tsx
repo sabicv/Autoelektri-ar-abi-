@@ -190,7 +190,9 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
   }
 
   return (
-    <fieldset disabled={locked} className="space-y-4">
+    // min-w-0: a fieldset defaults to min-width: min-content, so one long
+    // chip stretched every field past the card's edge on phones.
+    <fieldset disabled={locked} className="min-w-0 space-y-4">
       {/* Battery drain — highlighted per spec, not buried among other fields */}
       <div className="flex items-center gap-3 rounded-xl border-2 border-electric-blue/30 bg-electric-blue/5 px-3 py-2.5 dark:border-electric-blue/40 dark:bg-electric-blue/10">
         <BatteryWarning className="h-5 w-5 flex-shrink-0 text-electric-blue" strokeWidth={2} />
@@ -300,7 +302,7 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
                 >
                   <Plus className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" strokeWidth={2.5} />
                   <span className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">{s.code}</span>
-                  <span className="truncate text-xs text-slate-500 dark:text-slate-300">{s.description}</span>
+                  <span className="min-w-0 truncate text-xs text-slate-500 dark:text-slate-300">{s.description}</span>
                 </button>
               ))}
             </div>
