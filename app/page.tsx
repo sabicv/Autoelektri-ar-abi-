@@ -1,14 +1,14 @@
 import Link from 'next/link';
-import { LogIn, QrCode, Wrench } from 'lucide-react';
+import { LogIn, QrCode, Zap } from 'lucide-react';
 
 export default function HomePage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 px-4 py-10 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white">
-        <Wrench className="h-8 w-8" strokeWidth={2} />
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white">
+        <Zap className="h-8 w-8" fill="currentColor" strokeWidth={0} />
       </div>
 
-      <h1 className="mt-4 text-2xl font-bold text-slate-900">Auto Električar</h1>
+      <h1 className="mt-4 text-2xl font-bold text-slate-900">Volt Files</h1>
       <p className="mt-2 max-w-sm text-sm text-slate-500">
         Digitalna platforma za auto-električarske radionice — prijava kvara bez čekanja, trajni foto
         arhiv i automatizirane obavijesti klijentima.

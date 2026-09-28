@@ -24,7 +24,11 @@ interface WorkOrderInput {
   dtcCodes: string[];
   moduleNotes: string | null;
   batteryDrainMa: number | null;
+  // PNG or JPEG only (what pdf-lib embeds); anything else is left out.
+  logo: { bytes: Uint8Array; type: 'png' | 'jpg' } | null;
 }
+
+const LOGO_SIZE = 50;
 
 // The standard PDF fonts have no č/ć/đ, so a real font is embedded (and
 // subset, keeping the file small). DejaVu, because fontkit's subsetter
@@ -69,6 +73,7 @@ export async function buildWorkOrderPdf({
   dtcCodes,
   moduleNotes,
   batteryDrainMa,
+  logo,
 }: WorkOrderInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const fonts = await loadFonts(doc);
@@ -113,14 +118,26 @@ export async function buildWorkOrderPdf({
     }
   }
 
-  // Header: workshop left, document id right.
-  text(tenant.name, MARGIN, 16, { bold: true });
+  // Header: logo and workshop left, document id right.
+  let headerX = MARGIN;
+  if (logo) {
+    try {
+      const image = logo.type === 'png' ? await doc.embedPng(logo.bytes) : await doc.embedJpg(logo.bytes);
+      const fit = image.scaleToFit(LOGO_SIZE, LOGO_SIZE);
+      // Top edge level with the cap height of the workshop name.
+      page.drawImage(image, { x: MARGIN, y: y + 12 - fit.height, width: fit.width, height: fit.height });
+      headerX = MARGIN + fit.width + 12;
+    } catch {
+      // A broken image never blocks the document.
+    }
+  }
+  text(tenant.name, headerX, 16, { bold: true });
   rightText('RADNI NALOG / PREDRAČUN', PAGE.width - MARGIN, 8, { bold: true, color: MUTED });
   y -= 22;
-  if (tenant.address) text(tenant.address, MARGIN, 10, { color: MUTED });
+  if (tenant.address) text(tenant.address, headerX, 10, { color: MUTED });
   rightText(reference, PAGE.width - MARGIN, 18, { bold: true });
   y -= 14;
-  if (tenant.phone) text(tenant.phone, MARGIN, 10, { color: MUTED });
+  if (tenant.phone) text(tenant.phone, headerX, 10, { color: MUTED });
   y -= 6;
   rightText(new Date(job.created_at).toLocaleDateString('hr-HR'), PAGE.width - MARGIN, 10, { color: MUTED });
   y -= 14;

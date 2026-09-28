@@ -42,7 +42,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Radionica', {
+    self.registration.showNotification(data.title || 'Volt Files', {
       body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',

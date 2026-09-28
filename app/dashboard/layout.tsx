@@ -1,6 +1,7 @@
 import { getSessionProfile } from '@/lib/session';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import TenantSuspendedScreen from '@/components/dashboard/TenantSuspendedScreen';
+import TenantWatermark from '@/components/dashboard/TenantWatermark';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,8 +16,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return <TenantSuspendedScreen />;
   }
 
+  // isolate: the watermark's negative z-index then sits above this
+  // background but below everything else.
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-workshop-dark">
+    <div className="isolate min-h-dvh bg-slate-50 dark:bg-workshop-dark">
+      <TenantWatermark logoUrl={tenant.logo_url} />
       <DashboardNav tenantName={tenant.name} logoUrl={tenant.logo_url} role={profile.role} />
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
     </div>

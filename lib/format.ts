@@ -31,6 +31,11 @@ export const PHOTO_TAG_LABELS_HR: Record<PhotoTag, string> = {
   WORK_ORDER: 'Radni nalog / račun',
 };
 
+// Arhiva splits the vault in two: pictures of the car and the work, and
+// paperwork (the only tags a PDF can be filed under are in the second).
+export const PHOTO_ONLY_TAGS: PhotoTag[] = ['INTAKE_CONDITION', 'WIRING_DEFECT', 'DTC_DIAGNOSTIC_SCREEN', 'NEW_PARTS'];
+export const DOCUMENT_TAGS: PhotoTag[] = ['REGISTRATION_CARD', 'PARTS_INVOICE', 'DOCUMENT', 'WORK_ORDER'];
+
 // Vocative for a friendly "Bok Ivane". Vowel-ending names (Ana, Luka,
 // Stipe) don't change; consonant-ending male names take -e, with the
 // common k→če and j→ju shifts (Dominik → Dominiče, Matej → Mateju).

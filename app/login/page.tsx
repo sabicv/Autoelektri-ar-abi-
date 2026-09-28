@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Loader2, LogIn } from 'lucide-react';
+import { AlertCircle, Loader2, LogIn, Zap } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
@@ -39,7 +39,10 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-900">Prijava</h1>
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <Zap className="h-6 w-6" fill="currentColor" strokeWidth={0} />
+          </span>
+          <h1 className="mt-3 text-xl font-bold text-slate-900">Volt Files</h1>
           <p className="mt-1 text-sm text-slate-500">Prijavite se za pristup nadzornoj ploči radionice.</p>
         </div>
 

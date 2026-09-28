@@ -4,16 +4,17 @@ import { requireOwner } from '@/lib/session';
 import { cn } from '@/lib/utils';
 import { PHOTO_TAGS, type PhotoTag } from '@/types/database';
 import { ArchiveJobsTab } from '@/components/dashboard/archive/ArchiveJobsTab';
-import { ArchiveDocumentsTab } from '@/components/dashboard/archive/ArchiveDocumentsTab';
+import { ArchiveMediaTab } from '@/components/dashboard/archive/ArchiveMediaTab';
 import { ArchiveSearchResults } from '@/components/dashboard/archive/ArchiveSearchResults';
 import ArchiveSearchBox from '@/components/dashboard/archive/ArchiveSearchBox';
 
 export const dynamic = 'force-dynamic';
 
 // Vehicles live under Mušterije and money under Poslovanje, so the archive
-// is closed jobs (with their messages), stored documents and search.
+// is closed jobs (with their messages), photos, paperwork and search.
 const TABS = [
   { id: 'nalozi', label: 'Nalozi' },
+  { id: 'fotografije', label: 'Fotografije' },
   { id: 'dokumenti', label: 'Dokumenti' },
 ] as const;
 
@@ -53,7 +54,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
         <ArchiveSearchResults supabase={supabase} query={query} />
       ) : (
         <>
-          <nav className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
+          <nav className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-workshop-surface">
             {TABS.map((t) => (
               <Link
                 key={t.id}
@@ -72,7 +73,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
           </nav>
 
           {tab === 'nalozi' && <ArchiveJobsTab supabase={supabase} />}
-          {tab === 'dokumenti' && <ArchiveDocumentsTab supabase={supabase} tag={tag} />}
+          {tab !== 'nalozi' && <ArchiveMediaTab key={tab} supabase={supabase} tab={tab} tag={tag} />}
         </>
       )}
     </div>

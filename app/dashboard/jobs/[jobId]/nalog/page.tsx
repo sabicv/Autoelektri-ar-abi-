@@ -48,10 +48,16 @@ export default async function WorkOrderPage({ params }: PageProps) {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-900 print:rounded-none print:border-0 print:p-0 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100 dark:print:bg-white dark:print:text-slate-900">
         <div className="flex items-start justify-between border-b border-slate-200 pb-4 dark:border-workshop-border dark:print:border-slate-200">
-          <div>
-            <p className="text-lg font-black">{tenant.name}</p>
-            {tenant.address && <p className="text-sm text-slate-500 dark:text-slate-300 dark:print:text-slate-500">{tenant.address}</p>}
-            {tenant.phone && <p className="text-sm text-slate-500 dark:text-slate-300 dark:print:text-slate-500">{tenant.phone}</p>}
+          <div className="flex items-start gap-3">
+            {tenant.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tenant.logo_url} alt="" className="h-16 w-16 flex-shrink-0 rounded-lg object-contain" />
+            )}
+            <div>
+              <p className="text-lg font-black">{tenant.name}</p>
+              {tenant.address && <p className="text-sm text-slate-500 dark:text-slate-300 dark:print:text-slate-500">{tenant.address}</p>}
+              {tenant.phone && <p className="text-sm text-slate-500 dark:text-slate-300 dark:print:text-slate-500">{tenant.phone}</p>}
+            </div>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Radni nalog / predračun</p>

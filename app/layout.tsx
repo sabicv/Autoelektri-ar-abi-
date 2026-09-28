@@ -5,14 +5,14 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Auto Električar',
+    default: 'Volt Files',
     template: '%s',
   },
   description: 'Digitalna prijava kvara za auto-električarske radionice.',
-  applicationName: 'Radionica',
+  applicationName: 'Volt Files',
   // Installed on an iPhone: full screen, content runs under the status bar
   // (the header pads itself with env(safe-area-inset-top)).
-  appleWebApp: { capable: true, title: 'Radionica', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'Volt Files', statusBarStyle: 'black-translucent' },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

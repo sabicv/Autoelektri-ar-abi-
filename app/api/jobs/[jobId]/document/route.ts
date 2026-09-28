@@ -15,6 +15,21 @@ interface RouteContext {
   params: Promise<{ jobId: string }>;
 }
 
+// The public branding URL, as PNG/JPEG bytes pdf-lib can embed. Any other
+// format or a slow/failed fetch just leaves the logo off the document.
+async function loadLogo(url: string): Promise<{ bytes: Uint8Array; type: 'png' | 'jpg' } | null> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!response.ok) return null;
+    const contentType = response.headers.get('content-type') ?? '';
+    const type = contentType.includes('png') ? 'png' : contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : null;
+    if (!type) return null;
+    return { bytes: new Uint8Array(await response.arrayBuffer()), type };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(_request: Request, { params }: RouteContext) {
   const { jobId } = await params;
   const supabase = await createServerSupabaseClient();
@@ -51,6 +66,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
   let pdf: Uint8Array;
   try {
     pdf = await buildWorkOrderPdf({
+      logo: tenant.logo_url ? await loadLogo(tenant.logo_url) : null,
       tenant,
       client,
       vehicle,

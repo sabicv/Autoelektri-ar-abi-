@@ -115,14 +115,34 @@ export default function TaskFeed({ initialTasks, role, currentUserId, tenantId, 
     if (!saved) toast.error('Promjena nije spremljena. Osvježite stranicu i pokušajte ponovno.');
   }
 
-  async function remove(task: MechanicTask) {
-    if (!window.confirm('Obrisati zadatak?')) return;
+  // No confirmation: it disappears at once, and "Vrati" in the toast undoes
+  // a mistaken tap. The row is only deleted once the toast is gone.
+  function remove(task: MechanicTask) {
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
-    const { data, error } = await createBrowserSupabaseClient().from('mechanic_tasks').delete().eq('id', task.id).select('id');
-    if (error || !data?.length) {
-      setTasks((prev) => [task, ...prev]);
-      toast.error('Brisanje nije uspjelo.');
-    }
+    let settled = false;
+
+    const commit = async () => {
+      if (settled) return;
+      settled = true;
+      const { data, error } = await createBrowserSupabaseClient().from('mechanic_tasks').delete().eq('id', task.id).select('id');
+      if (error || !data?.length) {
+        setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev : [task, ...prev]));
+        toast.error('Brisanje nije uspjelo.');
+      }
+    };
+
+    toast('Zadatak obrisan', {
+      duration: 5000,
+      action: {
+        label: 'Vrati',
+        onClick: () => {
+          settled = true;
+          setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev : [task, ...prev]));
+        },
+      },
+      onAutoClose: commit,
+      onDismiss: commit,
+    });
   }
 
   // A mechanic with nothing assigned sees no extra block on Poslovi.

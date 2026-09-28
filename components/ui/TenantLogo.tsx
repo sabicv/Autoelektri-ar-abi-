@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 // so the header never has an empty hole.
 
 const SIZES = {
-  sm: 'h-9 w-9 text-xs',
+  sm: 'h-11 w-11 text-sm',
   lg: 'h-16 w-16 text-lg',
 } as const;
 
@@ -27,17 +27,15 @@ export default function TenantLogo({
   size?: keyof typeof SIZES;
   className?: string;
 }) {
+  // Edge to edge: a white frame and padding shrank the drawing to an
+  // unreadable smudge in the header.
   if (logoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={logoUrl}
         alt={name}
-        className={cn(
-          'flex-shrink-0 rounded-lg border border-slate-200 bg-white object-contain p-0.5 dark:border-workshop-border',
-          SIZES[size],
-          className
-        )}
+        className={cn('flex-shrink-0 rounded-xl object-contain shadow-sm ring-1 ring-black/10 dark:ring-white/10', SIZES[size], className)}
       />
     );
   }

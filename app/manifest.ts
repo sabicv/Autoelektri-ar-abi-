@@ -6,8 +6,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/dashboard/jobs',
-    name: 'Radionica',
-    short_name: 'Radionica',
+    name: 'Volt Files',
+    short_name: 'Volt Files',
     description: 'Radni nalozi, mušterije i arhiva autoelektričarske radionice.',
     lang: 'hr',
     start_url: '/dashboard/jobs',
