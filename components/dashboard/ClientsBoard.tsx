@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Car, Phone, Plus, Search, User, Users } from 'lucide-react';
+import { Car, ChevronRight, Plus, Search, User, Users } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import dynamic from 'next/dynamic';
 import { vehicleLabel } from '@/lib/format';
@@ -77,9 +77,11 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
           {filteredClients.map((client) => {
             const clientVehicles = vehiclesByClient.get(client.id) ?? [];
 
+            // The whole card opens the client; calling and vehicle history
+            // live there, so a stray tap never dials or lands somewhere else.
             return (
-              <Card key={client.id} className="p-4">
-                <div className="flex items-center gap-3">
+              <Link key={client.id} href={`/dashboard/clients/${client.id}`} className="block">
+                <Card hoverLift className="press-effect flex items-center gap-3 p-4">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-workshop-surface-hover">
                     <User className="h-5 w-5 text-slate-500 dark:text-slate-300" strokeWidth={2} />
                   </div>
@@ -87,29 +89,17 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
                     <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
                       {client.first_name} {client.last_name}
                     </p>
-                    <a
-                      href={`tel:${client.phone_number}`}
-                      className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-300"
-                    >
-                      <Phone className="h-3 w-3 flex-shrink-0" strokeWidth={2} /> {client.phone_number}
-                    </a>
-                  </div>
-                </div>
-                {clientVehicles.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {clientVehicles.map((v) => (
-                      <Link
-                        key={v.id}
-                        href={`/dashboard/vehicles/${v.id}`}
-                        className="press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-blue-400 dark:border-workshop-border dark:text-slate-200"
-                      >
+                    <p className="truncate text-xs tabular-nums text-slate-500 dark:text-slate-300">{client.phone_number}</p>
+                    {clientVehicles.length > 0 && (
+                      <p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-700 dark:text-slate-200">
                         <Car className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" strokeWidth={2} />
-                        {vehicleLabel(v)}
-                      </Link>
-                    ))}
+                        <span className="truncate">{clientVehicles.map((v) => vehicleLabel(v)).join(', ')}</span>
+                      </p>
+                    )}
                   </div>
-                )}
-              </Card>
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
+                </Card>
+              </Link>
             );
           })}
         </div>

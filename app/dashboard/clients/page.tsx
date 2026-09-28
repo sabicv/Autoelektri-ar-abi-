@@ -1,19 +1,10 @@
-import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSessionProfile } from '@/lib/session';
 import ClientsBoard from '@/components/dashboard/ClientsBoard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-  if (!profile) redirect('/login');
+  const { supabase, profile } = await getSessionProfile();
 
   // RLS scopes these to the current tenant automatically.
   const [{ data: clients }, { data: vehicles }] = await Promise.all([

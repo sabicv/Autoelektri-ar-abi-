@@ -266,10 +266,16 @@ export default function JobDetailView({
           <span className="truncate">{vehicleLabel(currentVehicle)}</span>
           <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
         </Link>
-        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-300">
+        <Link
+          href={`/dashboard/clients/${currentClient.id}`}
+          className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-300"
+        >
           <User className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
-          {currentClient.first_name} {currentClient.last_name}
-        </p>
+          <span className="truncate">
+            {currentClient.first_name} {currentClient.last_name}
+          </span>
+          <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 dark:text-slate-600" strokeWidth={2} />
+        </Link>
         {symptomSummary && <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{symptomSummary}</p>}
         {showParkedDuration && (
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-400">
