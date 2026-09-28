@@ -31,6 +31,8 @@ export default async function WorkOrderPage({ params }: PageProps) {
   if (!client || !vehicle || !tenant) notFound();
 
   const dtcCodes = Array.from(new Set((reports ?? []).flatMap((r: DiagnosticReport) => r.dtc_codes)));
+  // Each save adds a report; the newest holds the current module readings.
+  const latest = [...(reports ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
   const totalCost = jobTotal(job);
   const reference = job.id.slice(0, 8).toUpperCase();
 
@@ -96,6 +98,18 @@ export default async function WorkOrderPage({ params }: PageProps) {
                 );
               })}
             </ul>
+          </div>
+        )}
+
+        {latest && (latest.battery_drain_ma != null || latest.module_notes) && (
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Moduli / CAN-bus</p>
+            {latest.battery_drain_ma != null && (
+              <p className="mt-1 text-sm">
+                Parazitska potrošnja: <span className="font-semibold tabular-nums">{latest.battery_drain_ma} mA</span>
+              </p>
+            )}
+            {latest.module_notes && <p className="mt-1 whitespace-pre-wrap font-mono text-sm">{latest.module_notes}</p>}
           </div>
         )}
 

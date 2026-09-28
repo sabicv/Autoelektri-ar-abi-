@@ -13,6 +13,7 @@ import { existingVehicleJobSchema, newClientSchema, newJobSchema } from '@/lib/v
 import { useSpeechToText } from '@/lib/useSpeechToText';
 import { vehicleLabel } from '@/lib/format';
 import { clearDraft, readDraft, writeDraft } from '@/lib/drafts';
+import { thumbPath } from '@/lib/thumbnails';
 import { cn } from '@/lib/utils';
 import type { Client, Vehicle } from '@/types/database';
 
@@ -199,7 +200,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
     if (photos.length === 0) return;
     await createBrowserSupabaseClient()
       .storage.from('job-vault')
-      .remove(photos.map((p) => p.path));
+      .remove(photos.flatMap((p) => [p.path, thumbPath(p.path)]));
   }
 
   function reset() {
@@ -330,7 +331,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
         .select('id')
         .single();
       if (error || !created) {
-        toast.error('Spremanje klijenta nije uspjelo.');
+        toast.error('Spremanje mušterije nije uspjelo.');
         return;
       }
       clientId = created.id;
@@ -346,13 +347,13 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
       vin: d.vin || null,
     });
     if (vehicleError) {
-      toast.error(vehicleError.code === '23505' ? 'Vozilo s tom registracijom već postoji.' : 'Klijent je spremljen, ali vozilo nije.');
+      toast.error(vehicleError.code === '23505' ? 'Vozilo s tom registracijom već postoji.' : 'Mušterija je spremljena, ali vozilo nije.');
       return;
     }
 
     // No job to attach the registration photo to.
     await removeStagedPhotos(registrationPhoto ? [registrationPhoto] : []);
-    toast.success(existingClient ? 'Vozilo dodano postojećem klijentu.' : 'Klijent i vozilo spremljeni.');
+    toast.success(existingClient ? 'Vozilo dodano postojećoj mušteriji.' : 'Mušterija i vozilo spremljeni.');
     clearDraft(draftKey);
     reset();
     onClose();
@@ -657,7 +658,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
             ) : (
               <UserPlus className="h-5 w-5" strokeWidth={2} />
             )}
-            {isSubmitting ? 'Spremanje…' : isJobMode ? 'Spremi i otvori radni nalog' : 'Spremi klijenta'}
+            {isSubmitting ? 'Spremanje…' : isJobMode ? 'Spremi i otvori radni nalog' : 'Spremi mušteriju'}
           </button>
         </form>
       </DrawerContent>

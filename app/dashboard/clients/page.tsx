@@ -14,7 +14,7 @@ export default async function ClientsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Klijenti</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Mušterije</h1>
       <ClientsBoard clients={clients ?? []} vehicles={vehicles ?? []} tenantId={profile.tenant_id} />
     </div>
   );

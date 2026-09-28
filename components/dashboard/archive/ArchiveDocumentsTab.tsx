@@ -1,8 +1,8 @@
-import Link from 'next/link';
-import { FileText } from 'lucide-react';
 import { isPdfPath, PHOTO_TAG_LABELS_HR } from '@/lib/format';
+import { signWithThumbnails } from '@/lib/thumbnails';
 import type { ServerSupabaseClient } from '@/lib/supabase/server';
 import { PHOTO_TAGS, type PhotoTag } from '@/types/database';
+import DocumentGrid from './DocumentGrid';
 import { EmptyState, FilterPill } from './shared';
 
 const PAGE_SIZE = 30;
@@ -27,14 +27,10 @@ export async function ArchiveDocumentsTab({
   const total = allTags?.length ?? 0;
 
   const list = photos ?? [];
-  const { data: signed } =
-    list.length > 0
-      ? await supabase.storage.from('job-vault').createSignedUrls(
-          list.map((p) => p.photo_url),
-          3600
-        )
-      : { data: [] };
-  const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  const signed = await signWithThumbnails(
+    supabase.storage.from('job-vault'),
+    list.map((p) => p.photo_url)
+  );
 
   return (
     <div className="space-y-3">
@@ -52,31 +48,22 @@ export async function ArchiveDocumentsTab({
       {list.length === 0 ? (
         <EmptyState>Nema dokumenata.</EmptyState>
       ) : (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {list.map((photo) => {
-            const url = urlByPath.get(photo.photo_url);
-            const isPdf = isPdfPath(photo.photo_url);
-            return (
-              <Link
-                key={photo.id}
-                href={`/dashboard/jobs/${photo.job_id}`}
-                className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-workshop-border dark:bg-workshop-surface-hover"
-              >
-                {isPdf || !url ? (
-                  <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-400">
-                    <FileText className="h-8 w-8" strokeWidth={1.5} />
-                  </div>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} loading="lazy" className="h-full w-full object-cover" />
-                )}
-                <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">
-                  {new Date(photo.created_at).toLocaleDateString('hr-HR')} · {PHOTO_TAG_LABELS_HR[photo.tag]}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <DocumentGrid
+          items={list.map((photo) => ({
+            id: photo.id,
+            path: photo.photo_url,
+            url: signed.get(photo.photo_url)?.url ?? '',
+            thumbUrl: signed.get(photo.photo_url)?.thumbUrl,
+            jobHref: `/dashboard/jobs/${photo.job_id}?from=arhiva`,
+            tag: photo.tag,
+            caption: photo.caption,
+            createdAt: photo.created_at,
+            takenAt: photo.taken_at,
+            gpsLat: photo.gps_lat,
+            gpsLng: photo.gps_lng,
+            isPdf: isPdfPath(photo.photo_url),
+          }))}
+        />
       )}
     </div>
   );

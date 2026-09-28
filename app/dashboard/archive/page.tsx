@@ -1,16 +1,17 @@
 import Link from 'next/link';
-import { Search, X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { requireOwner } from '@/lib/session';
 import { cn } from '@/lib/utils';
 import { PHOTO_TAGS, type PhotoTag } from '@/types/database';
 import { ArchiveJobsTab } from '@/components/dashboard/archive/ArchiveJobsTab';
 import { ArchiveDocumentsTab } from '@/components/dashboard/archive/ArchiveDocumentsTab';
 import { ArchiveSearchResults } from '@/components/dashboard/archive/ArchiveSearchResults';
+import ArchiveSearchBox from '@/components/dashboard/archive/ArchiveSearchBox';
 
 export const dynamic = 'force-dynamic';
 
-// Vehicles live under Klijenti and money under Poslovanje, so the archive
-// is just history: search, past jobs and stored documents.
+// Vehicles live under Mušterije and money under Poslovanje, so the archive
+// is closed jobs (with their messages), stored documents and search.
 const TABS = [
   { id: 'nalozi', label: 'Nalozi' },
   { id: 'dokumenti', label: 'Dokumenti' },
@@ -33,27 +34,16 @@ export default async function ArchivePage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
+      <Link
+        href="/dashboard/jobs"
+        className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
+      >
+        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Poslovi
+      </Link>
+
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Arhiva</h1>
 
-      <form method="GET" action="/dashboard/archive" className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-        <input
-          type="search"
-          name="q"
-          defaultValue={query}
-          placeholder="Traži u arhivi"
-          className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-10 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface dark:text-slate-100"
-        />
-        {query && (
-          <Link
-            href={`/dashboard/archive?tab=${tab}`}
-            aria-label="Očisti pretragu"
-            className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400"
-          >
-            <X className="h-4 w-4" strokeWidth={2} />
-          </Link>
-        )}
-      </form>
+      <ArchiveSearchBox key={query} initialQuery={query} tab={tab} />
 
       {query.length > 0 && !isSearching && (
         <p className="text-sm text-slate-500 dark:text-slate-300">Unesite barem 2 znaka za pretragu.</p>
@@ -68,6 +58,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
               <Link
                 key={t.id}
                 href={`/dashboard/archive?tab=${t.id}`}
+                replace
                 className={cn(
                   'press-effect flex min-h-[48px] items-center justify-center rounded-lg text-sm font-semibold',
                   tab === t.id

@@ -3,7 +3,7 @@ import type { ServerSupabaseClient } from '@/lib/supabase/server';
 import { ArchiveRow, EmptyState } from './shared';
 
 const KIND_META = {
-  vehicle: { label: 'Vozila i klijenti', icon: Car },
+  vehicle: { label: 'Vozila i mušterije', icon: Car },
   job: { label: 'Nalozi (bilješke, radovi, DTC)', icon: Wrench },
   document: { label: 'Dokumenti', icon: FileText },
 } as const;
@@ -34,7 +34,7 @@ export async function ArchiveSearchResults({ supabase, query }: { supabase: Serv
             {group.map((r) => (
               <ArchiveRow
                 key={`${kind}-${r.job_id ?? r.vehicle_id}-${r.created_at}`}
-                href={kind === 'vehicle' ? `/dashboard/vehicles/${r.vehicle_id}` : `/dashboard/jobs/${r.job_id}`}
+                href={kind === 'vehicle' ? `/dashboard/vehicles/${r.vehicle_id}` : `/dashboard/jobs/${r.job_id}?from=arhiva`}
                 icon={<Icon className="h-5 w-5" strokeWidth={2} />}
                 title={r.title || 'Bez naziva'}
                 subtitle={[r.subtitle, kind === 'vehicle' ? null : new Date(r.created_at).toLocaleDateString('hr-HR')]

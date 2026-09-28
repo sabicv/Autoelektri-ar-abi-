@@ -4,6 +4,7 @@ import { ArrowLeft, Car, Phone, User } from 'lucide-react';
 import { getSessionProfile } from '@/lib/session';
 import { isPdfPath, vehicleLabel } from '@/lib/format';
 import { redactJobForRole } from '@/lib/finance';
+import { signWithThumbnails } from '@/lib/thumbnails';
 import Card from '@/components/ui/Card';
 import VehicleHistoryTimeline, { type TimelinePhoto } from '@/components/dashboard/VehicleHistoryTimeline';
 import type { DiagnosticReport, JobPhoto } from '@/types/database';
@@ -54,14 +55,10 @@ export default async function VehiclePassportPage({ params }: PageProps) {
 
   // One batch of signed URLs for the whole vehicle instead of one request per job.
   const rows = photoRows ?? [];
-  const { data: signed } =
-    rows.length > 0
-      ? await supabase.storage.from('job-vault').createSignedUrls(
-          rows.map((p) => p.photo_url),
-          3600
-        )
-      : { data: [] };
-  const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  const signed = await signWithThumbnails(
+    supabase.storage.from('job-vault'),
+    rows.map((p) => p.photo_url)
+  );
   const captured = (p: JobPhoto) => p.taken_at ?? p.created_at;
 
   const photosByJobId: Record<string, TimelinePhoto[]> = {};
@@ -69,7 +66,8 @@ export default async function VehiclePassportPage({ params }: PageProps) {
     (photosByJobId[p.job_id] ??= []).push({
       id: p.id,
       path: p.photo_url,
-      url: urlByPath.get(p.photo_url) ?? '',
+      url: signed.get(p.photo_url)?.url ?? '',
+      thumbUrl: signed.get(p.photo_url)?.thumbUrl,
       tag: p.tag,
       caption: p.caption,
       createdAt: p.created_at,
@@ -87,7 +85,7 @@ export default async function VehiclePassportPage({ params }: PageProps) {
         className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-        {client ? `${client.first_name} ${client.last_name}` : 'Klijenti'}
+        {client ? `${client.first_name} ${client.last_name}` : 'Mušterije'}
       </Link>
 
       <Card className="p-5">

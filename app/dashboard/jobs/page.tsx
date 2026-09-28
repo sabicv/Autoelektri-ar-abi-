@@ -1,6 +1,7 @@
 import { getSessionProfile } from '@/lib/session';
 import { redactJobForRole } from '@/lib/finance';
 import { vehicleLabel } from '@/lib/format';
+import { OPEN_JOBS_FILTER } from '@/lib/jobLifecycle';
 import JobsBoard from '@/components/dashboard/JobsBoard';
 import TaskFeed from '@/components/dashboard/tasks/TaskFeed';
 
@@ -11,8 +12,14 @@ export default async function JobsPage() {
   const doneCutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
   // RLS scopes these to the current tenant (and, for tasks, to a mechanic's own).
+  // Closed jobs live in Arhiva (and under each Mušterija), not here.
   const [{ data: jobs }, { data: clients }, { data: vehicles }, { data: tasks }, { data: staff }] = await Promise.all([
-    supabase.from('jobs').select('*').order('created_at', { ascending: false }),
+    supabase
+      .from('jobs')
+      .select('*')
+      .neq('status', 'COLLECTED')
+      .or(OPEN_JOBS_FILTER)
+      .order('created_at', { ascending: false }),
     supabase.from('clients').select('*'),
     supabase.from('vehicles').select('*'),
     supabase

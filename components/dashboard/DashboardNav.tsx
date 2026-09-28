@@ -27,7 +27,7 @@ import type { StaffRole } from '@/types/database';
 
 const LINKS = [
   { href: '/dashboard/jobs', label: 'Poslovi', icon: Briefcase, ownerOnly: false },
-  { href: '/dashboard/clients', label: 'Klijenti', icon: Users, ownerOnly: false },
+  { href: '/dashboard/clients', label: 'Mušterije', icon: Users, ownerOnly: false },
   { href: '/dashboard/archive', label: 'Arhiva', icon: Archive, ownerOnly: true },
   { href: '/dashboard/analytics', label: 'Poslovanje', icon: BarChart3, ownerOnly: true },
 ];

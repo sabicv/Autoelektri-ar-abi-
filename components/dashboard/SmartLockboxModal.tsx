@@ -99,7 +99,7 @@ export default function SmartLockboxModal({ open, onClose, job, onSent }: SmartL
 
         <div>
           <label htmlFor="lockboxMessage" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Poruka klijentu
+            Poruka mušteriji
           </label>
           <textarea
             id="lockboxMessage"

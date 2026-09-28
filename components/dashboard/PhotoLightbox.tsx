@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, MapPin, X } from 'lucide-react';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
@@ -11,6 +12,10 @@ export interface LightboxPhoto {
   id: string;
   path: string;
   url: string;
+  // Small preview for grids (lib/thumbnails.ts); the lightbox shows `url`.
+  thumbUrl?: string;
+  // Set where the photo is shown away from its job (Arhiva → Dokumenti).
+  jobHref?: string;
   tag: PhotoTag;
   caption: string | null;
   createdAt: string;
@@ -125,14 +130,24 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
               )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="press-effect flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full hover:bg-white/10"
-            aria-label="Zatvori"
-          >
-            <X className="h-6 w-6" strokeWidth={2} />
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-1">
+            {photo.jobHref && (
+              <Link
+                href={photo.jobHref}
+                className="press-effect flex min-h-[48px] items-center gap-1 rounded-full px-3 text-sm font-semibold hover:bg-white/10"
+              >
+                Nalog <ChevronRight className="h-4 w-4" strokeWidth={2} />
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="press-effect flex h-12 w-12 items-center justify-center rounded-full hover:bg-white/10"
+              aria-label="Zatvori"
+            >
+              <X className="h-6 w-6" strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
         <div

@@ -73,7 +73,7 @@ export default async function InvoicesOverview({
         {jobs.length === 0 ? (
           <EmptyState>{filter === 'unpaid' ? 'Nema neplaćenih naloga.' : 'Nema naloga s upisanom cijenom.'}</EmptyState>
         ) : (
-          <JobList jobs={jobs} vehicles={vehicles} clients={clients} />
+          <JobList jobs={jobs} vehicles={vehicles} clients={clients} from="poslovanje" />
         )}
       </section>
 

@@ -11,15 +11,15 @@ import type { Client, Job, Vehicle } from '@/types/database';
 
 const NewJobModal = dynamic(() => import('./NewJobModal'), { ssr: false });
 
-type Filter = 'ACTIVE' | 'WAITING' | 'READY' | 'COLLECTED';
+// Only open jobs reach this board; collected or finished-and-paid ones
+// are in Arhiva (see lib/jobLifecycle.ts).
+type Filter = 'ACTIVE' | 'WAITING' | 'READY';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'ACTIVE', label: 'Aktivno' },
   { key: 'WAITING', label: 'Čeka dijelove' },
   { key: 'READY', label: 'Spremno' },
-  { key: 'COLLECTED', label: 'Preuzeto' },
 ];
-
 
 interface JobsBoardProps {
   jobs: Job[];
@@ -48,15 +48,13 @@ export default function JobsBoard({ jobs, clients, vehicles, tenantId }: JobsBoa
   const filteredJobs = useMemo(() => {
     const statusFiltered = jobList.filter((j) => {
       switch (filter) {
-        case 'ACTIVE':
-          return j.status !== 'COLLECTED';
         case 'WAITING':
           return j.status === 'WAITING_PARTS';
         case 'READY':
           return j.status === 'FINISHED_AWAITING_PICKUP';
-        case 'COLLECTED':
+        case 'ACTIVE':
         default:
-          return j.status === 'COLLECTED';
+          return true;
       }
     });
 

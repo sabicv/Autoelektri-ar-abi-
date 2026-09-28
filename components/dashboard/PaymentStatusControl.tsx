@@ -1,20 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Loader2, Undo2 } from 'lucide-react';
+import { CheckCircle2, CircleDashed, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PAYMENT_STATUS_LABELS_HR } from '@/lib/format';
 import { archiveWorkOrder } from '@/lib/archiveWorkOrder';
+import { isClosedJob } from '@/lib/jobLifecycle';
 import { cn } from '@/lib/utils';
 import type { Job } from '@/types/database';
 
 interface PaymentStatusControlProps {
-  job: Pick<Job, 'id' | 'tenant_id' | 'payment_status' | 'paid_at'>;
+  job: Pick<Job, 'id' | 'tenant_id' | 'status' | 'payment_status' | 'paid_at'>;
   onChanged: (patch: Pick<Job, 'payment_status' | 'paid_at'>) => void;
   onArchived?: () => void;
 }
 
+// One switch, both directions: amber Neplaćeno ⇄ green Plaćeno.
 export default function PaymentStatusControl({ job, onChanged, onArchived }: PaymentStatusControlProps) {
   const [isSaving, setIsSaving] = useState(false);
   const isPaid = job.payment_status === 'PAID';
@@ -26,9 +28,9 @@ export default function PaymentStatusControl({ job, onChanged, onArchived }: Pay
 
     setIsSaving(true);
     const supabase = createBrowserSupabaseClient();
-    const { error } = await supabase.from('jobs').update(patch).eq('id', job.id);
+    const { data, error } = await supabase.from('jobs').update(patch).eq('id', job.id).select('id');
 
-    if (error) {
+    if (error || !data?.length) {
       setIsSaving(false);
       toast.error('Promjena plaćanja nije uspjela.');
       return;
@@ -51,49 +53,66 @@ export default function PaymentStatusControl({ job, onChanged, onArchived }: Pay
     }
     // A paid job gets its final PDF (with "PLAĆENO") filed automatically.
     const archived = await archiveWorkOrder(job.id);
-    toast.success(archived ? 'Plaćeno — račun spremljen u arhivu.' : 'Označeno kao plaćeno.');
+    const closed = isClosedJob({ status: job.status, payment_status: 'PAID' });
+    toast.success(
+      closed
+        ? 'Plaćeno — nalog je zatvoren i premješten u Arhivu.'
+        : archived
+          ? 'Plaćeno — račun spremljen u arhivu.'
+          : 'Označeno kao plaćeno.'
+    );
     if (archived) onArchived?.();
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 dark:border-workshop-border">
-      <div>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={isPaid}
+      onClick={toggle}
+      disabled={isSaving}
+      className={cn(
+        'press-effect flex min-h-[60px] w-full items-center justify-between gap-3 rounded-xl border-2 px-4 text-left disabled:opacity-70',
+        isPaid
+          ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500/60 dark:bg-emerald-500/10'
+          : 'border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-500/10'
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        {isSaving ? (
+          <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin text-slate-500" />
+        ) : isPaid ? (
+          <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+        ) : (
+          <CircleDashed className="h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+        )}
         <span
           className={cn(
-            'rounded-full px-2.5 py-1 text-xs font-bold',
-            isPaid
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-              : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+            'text-base font-bold',
+            isPaid ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'
           )}
         >
           {PAYMENT_STATUS_LABELS_HR[job.payment_status]}
         </span>
         {isPaid && job.paid_at && (
-          <span className="ml-2 text-xs text-slate-400 dark:text-slate-400">
+          <span className="text-xs text-emerald-700/80 dark:text-emerald-400/80">
             {new Date(job.paid_at).toLocaleDateString('hr-HR')}
           </span>
         )}
-      </div>
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={isSaving}
+      </span>
+      <span
         className={cn(
-          'press-effect flex min-h-[48px] items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-60',
-          isPaid
-            ? 'border border-slate-300 text-slate-600 dark:border-workshop-border dark:text-slate-300'
-            : 'bg-emerald-600 text-white'
+          'relative h-8 w-14 flex-shrink-0 rounded-full transition-colors',
+          isPaid ? 'bg-emerald-500' : 'bg-amber-400'
         )}
       >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : isPaid ? (
-          <Undo2 className="h-4 w-4" strokeWidth={2} />
-        ) : (
-          <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
-        )}
-        {isPaid ? 'Vrati na neplaćeno' : 'Označi plaćeno'}
-      </button>
-    </div>
+        <span
+          className={cn(
+            'absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform',
+            isPaid ? 'translate-x-7' : 'translate-x-1'
+          )}
+        />
+      </span>
+    </button>
   );
 }

@@ -250,7 +250,11 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onKeyDown={handleInputKeyDown}
               placeholder="Dodaj kod"
-              className="w-full bg-transparent text-sm text-slate-900 focus:outline-none dark:text-slate-100"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              className="min-h-[28px] w-full bg-transparent text-base text-slate-900 focus:outline-none dark:text-slate-100"
             />
           </div>
 
@@ -314,12 +318,19 @@ const DiagnosticWorkbench = forwardRef<SectionHandle, DiagnosticWorkbenchProps>(
         <label htmlFor="moduleNotes" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
           Moduli / CAN-bus
         </label>
+        {/* Typed, not dictated: module names, mA/V readings and LIN/BCM
+            abbreviations must survive exactly, so the keyboard may not
+            capitalise or "correct" them. */}
         <textarea
           id="moduleNotes"
-          rows={2}
+          rows={3}
           value={moduleNotes}
           onChange={(e) => setModuleNotes(e.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-mono text-base text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-workshop-border dark:bg-workshop-surface-hover dark:text-slate-100"
         />
       </div>
 

@@ -1,18 +1,19 @@
 import { notFound } from 'next/navigation';
 import { getSessionProfile } from '@/lib/session';
 import { redactEventsForRole, redactJobForRole } from '@/lib/finance';
+import { jobBackLink } from '@/lib/jobLifecycle';
 import JobDetailView from '@/components/dashboard/JobDetailView';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ jobId: string }>;
-  searchParams: Promise<{ poruke?: string }>;
+  searchParams: Promise<{ poruke?: string; from?: string }>;
 }
 
 export default async function JobDetailPage({ params, searchParams }: PageProps) {
   const { jobId } = await params;
-  const { poruke } = await searchParams;
+  const { poruke, from } = await searchParams;
   const { supabase, user, profile } = await getSessionProfile();
 
   const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).maybeSingle();
@@ -42,6 +43,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
       staffNames={Object.fromEntries(staffList.map((s) => [s.id, s.name]))}
       messages={messages ?? []}
       openMessages={poruke === '1'}
+      back={jobBackLink(from)}
     />
   );
 }

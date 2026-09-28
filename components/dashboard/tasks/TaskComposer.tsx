@@ -118,7 +118,7 @@ export default function TaskComposer({
     <Drawer open={open} onOpenChange={(next) => !next && close()}>
       <DrawerContent className="max-h-[95dvh]">
         <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
-          {replyTo ? 'Odgovor' : 'Zadatak mehaničaru'}
+          {replyTo ? 'Odgovor' : jobId ? 'Proslijedi radniku' : 'Zadatak mehaničaru'}
         </DrawerTitle>
 
         <div className="space-y-4 overflow-y-auto px-4 py-4">

@@ -5,6 +5,7 @@ import { FileText, ImageOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR, isPdfPath } from '@/lib/format';
+import { signWithThumbnails, thumbPath } from '@/lib/thumbnails';
 import Skeleton from '@/components/ui/Skeleton';
 import dynamic from 'next/dynamic';
 import type { LightboxPhoto } from './PhotoLightbox';
@@ -40,22 +41,19 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
         return;
       }
 
-      const { data: signedUrls } = await supabase.storage
-        .from('job-vault')
-        .createSignedUrls(
-          rows.map((r) => r.photo_url),
-          3600
-        );
+      const signed = await signWithThumbnails(
+        supabase.storage.from('job-vault'),
+        rows.map((r) => r.photo_url)
+      );
 
       if (cancelled) return;
-
-      const urlByPath = new Map((signedUrls ?? []).map((s) => [s.path, s.signedUrl]));
 
       setPhotos(
         rows.map((r) => ({
           id: r.id,
           path: r.photo_url,
-          url: urlByPath.get(r.photo_url) ?? '',
+          url: signed.get(r.photo_url)?.url ?? '',
+          thumbUrl: signed.get(r.photo_url)?.thumbUrl,
           tag: r.tag,
           caption: r.caption,
           createdAt: r.created_at,
@@ -78,7 +76,7 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
     setDeletingId(photo.id);
     const supabase = createBrowserSupabaseClient();
 
-    await supabase.storage.from('job-vault').remove([photo.path]);
+    await supabase.storage.from('job-vault').remove([photo.path, thumbPath(photo.path)]);
     const { error } = await supabase.from('job_photos').delete().eq('id', photo.id);
 
     setDeletingId(null);
@@ -146,7 +144,12 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
               ) : (
                 photo.url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.url} alt={PHOTO_TAG_LABELS_HR[photo.tag]} className="h-full w-full object-cover" />
+                  <img
+                    src={photo.thumbUrl || photo.url}
+                    alt={PHOTO_TAG_LABELS_HR[photo.tag]}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
                 )
               )}
               <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] font-semibold text-white">

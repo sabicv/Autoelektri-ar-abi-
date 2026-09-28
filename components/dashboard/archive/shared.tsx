@@ -37,10 +37,12 @@ export function ArchiveRow({
   );
 }
 
+// replace: switching a filter shouldn't add a step to the phone's Back button.
 export function FilterPill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}
+      replace
       className={cn(
         'press-effect inline-flex min-h-[48px] items-center whitespace-nowrap rounded-full px-4 text-sm font-semibold',
         active

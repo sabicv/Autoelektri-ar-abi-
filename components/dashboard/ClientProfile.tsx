@@ -109,7 +109,7 @@ export function ClientDetailsCard({ client: initialClient }: { client: Client })
     if (updateError || !data) {
       setError(
         updateError?.code === UNIQUE_VIOLATION
-          ? 'Drugi klijent već ima taj broj telefona.'
+          ? 'Druga mušterija već ima taj broj telefona.'
           : 'Spremanje nije uspjelo. Pokušajte ponovno.'
       );
       return;
@@ -117,7 +117,7 @@ export function ClientDetailsCard({ client: initialClient }: { client: Client })
 
     setClient(data);
     setEditing(false);
-    toast.success('Podaci klijenta su spremljeni.');
+    toast.success('Podaci mušterije su spremljeni.');
     router.refresh();
   }
 

@@ -9,7 +9,6 @@ import {
   Boxes,
   Camera,
   Car,
-  ClipboardList,
   ChevronRight,
   Euro,
   History,
@@ -20,6 +19,7 @@ import {
   Phone,
   Printer,
   RefreshCw,
+  Send,
   Stethoscope,
   User,
   Wrench,
@@ -48,6 +48,7 @@ import JobMessages from './tasks/JobMessages';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
+import { isClosedJob } from '@/lib/jobLifecycle';
 import { archiveWorkOrder } from '@/lib/archiveWorkOrder';
 import { SYMPTOM_OPTIONS } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
@@ -84,6 +85,7 @@ interface JobDetailViewProps {
   staffNames: Record<string, string>;
   messages: MechanicTask[];
   openMessages: boolean;
+  back: { href: string; label: string };
 }
 
 export default function JobDetailView({
@@ -97,6 +99,7 @@ export default function JobDetailView({
   staffNames,
   messages: initialMessages,
   openMessages,
+  back,
 }: JobDetailViewProps) {
   const isOwner = viewerRole === 'owner';
   const [currentJob, setCurrentJob] = useState(job);
@@ -165,7 +168,11 @@ export default function JobDetailView({
     });
 
     setCurrentJob(redactJobForRole(data, viewerRole));
-    toast.success(`Status: ${JOB_STATUS_LABELS_HR[newStatus]}`);
+    toast.success(
+      isClosedJob(data) && !isClosedJob(currentJob)
+        ? `${JOB_STATUS_LABELS_HR[newStatus]} — nalog je zatvoren${isOwner ? ' i premješten u Arhivu' : ''}.`
+        : `Status: ${JOB_STATUS_LABELS_HR[newStatus]}`
+    );
   }
 
   // Saves only the sections that actually changed. null = nothing to save.
@@ -236,10 +243,10 @@ export default function JobDetailView({
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       <Link
-        href="/dashboard/jobs"
+        href={back.href}
         className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
       >
-        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Natrag na poslove
+        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> {back.label}
       </Link>
 
       <Card className="p-4">
@@ -300,13 +307,23 @@ export default function JobDetailView({
 
         {isDiagnosticPhase && (
           <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => setNotificationType('DIAGNOSTIC_COMPLETE')}>
-            <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova — obavijesti klijenta
+            <Stethoscope className="h-4 w-4" strokeWidth={2} /> Dijagnoza gotova — obavijesti mušteriju
           </Button>
         )}
         {isFinished && isOwner && (
           <Button variant="primary" size="sm" className="mt-2 w-full" onClick={() => setNotificationType('JOB_FINISHED')}>
-            <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta da je gotovo
+            <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti mušteriju da je gotovo
           </Button>
+        )}
+        {/* The owner's counterpart to "Trebam pomoć": the task is filed with this job. */}
+        {isOwner && staff.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setTaskOpen(true)}
+            className="press-effect mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border-2 border-blue-600 text-sm font-semibold text-blue-700 dark:border-electric-blue dark:text-electric-blue"
+          >
+            <Send className="h-4 w-4" strokeWidth={2} /> Proslijedi radniku
+          </button>
         )}
         {!isOwner && (
           <button
@@ -405,7 +422,7 @@ export default function JobDetailView({
         </Card>
       )}
 
-      <CollapsibleCard title="Uredi klijenta i vozilo" icon={<User className="h-4 w-4" strokeWidth={2} />}>
+      <CollapsibleCard title="Uredi mušteriju i vozilo" icon={<User className="h-4 w-4" strokeWidth={2} />}>
         <ClientVehicleEditor
           ref={detailsRef}
           jobId={currentJob.id}
@@ -512,19 +529,6 @@ export default function JobDetailView({
               >
                 <KeyRound className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
                 Pametni sef (preuzimanje ključeva)
-              </button>
-            )}
-            {isOwner && staff.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  setTaskOpen(true);
-                }}
-                className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
-              >
-                <ClipboardList className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
-                Zadatak mehaničaru
               </button>
             )}
           </div>

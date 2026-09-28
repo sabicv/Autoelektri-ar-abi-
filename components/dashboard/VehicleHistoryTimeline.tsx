@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ChevronRight, FileText, MessagesSquare, Search, Wrench } from 'lucide-react';
+import { BatteryWarning, ChevronRight, FileText, MessagesSquare, Search, Wrench } from 'lucide-react';
 import { jobTotal } from '@/lib/finance';
 import Badge from '@/components/ui/Badge';
 import { JOB_STATUS_BADGE_VARIANT } from './JobBadges';
@@ -71,7 +71,13 @@ export default function VehicleHistoryTimeline({
       ) : (
         <ol className="relative ml-2 space-y-6 border-l-2 border-slate-200 pl-5 dark:border-workshop-border">
           {filteredJobs.map((job) => {
-            const codes = Array.from(new Set((reportsByJobId.get(job.id) ?? []).flatMap((r) => r.dtc_codes)));
+            const reports = reportsByJobId.get(job.id) ?? [];
+            const codes = Array.from(new Set(reports.flatMap((r) => r.dtc_codes)));
+            // Each save adds a report; the newest holds the current readings.
+            const latest = reports.reduce<DiagnosticReport | null>(
+              (acc, r) => (!acc || r.created_at > acc.created_at ? r : acc),
+              null
+            );
             const photos = photosByJobId[job.id] ?? [];
             const shown = photos.slice(0, THUMBS_PER_JOB);
 
@@ -105,6 +111,17 @@ export default function VehicleHistoryTimeline({
                   </div>
                 )}
 
+                {latest?.battery_drain_ma != null && (
+                  <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                    <BatteryWarning className="h-4 w-4 flex-shrink-0 text-slate-400" strokeWidth={2} />
+                    Parazitska potrošnja: <span className="font-semibold tabular-nums">{latest.battery_drain_ma} mA</span>
+                  </p>
+                )}
+                {latest?.module_notes && (
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 px-2.5 py-2 font-mono text-xs text-slate-700 dark:bg-workshop-surface-hover dark:text-slate-300">
+                    {latest.module_notes}
+                  </p>
+                )}
                 {job.diagnostic_notes && (
                   <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{job.diagnostic_notes}</p>
                 )}
@@ -135,7 +152,7 @@ export default function VehicleHistoryTimeline({
                             <FileText className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
                           ) : (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={photo.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                            <img src={photo.thumbUrl || photo.url} alt="" loading="lazy" className="h-full w-full object-cover" />
                           )}
                           {extra > 0 && (
                             <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-bold text-white">
@@ -150,14 +167,14 @@ export default function VehicleHistoryTimeline({
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4">
                   <Link
-                    href={`/dashboard/jobs/${job.id}`}
+                    href={`/dashboard/jobs/${job.id}?from=vozilo:${job.vehicle_id}`}
                     className="inline-flex min-h-[48px] items-center gap-1 text-sm font-semibold text-blue-600 dark:text-electric-blue"
                   >
                     Otvori nalog <ChevronRight className="h-4 w-4" strokeWidth={2} />
                   </Link>
                   {messageCounts[job.id] > 0 && (
                     <Link
-                      href={`/dashboard/jobs/${job.id}?poruke=1`}
+                      href={`/dashboard/jobs/${job.id}?poruke=1&from=vozilo:${job.vehicle_id}`}
                       className="inline-flex min-h-[48px] items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-300"
                     >
                       <MessagesSquare className="h-4 w-4" strokeWidth={2} /> Interne poruke ({messageCounts[job.id]})

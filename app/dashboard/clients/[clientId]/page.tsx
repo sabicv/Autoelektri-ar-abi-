@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getSessionProfile } from '@/lib/session';
 import { redactJobForRole } from '@/lib/finance';
 import { ClientDetailsCard, VehicleCard } from '@/components/dashboard/ClientProfile';
-import { JobList } from '@/components/dashboard/archive/ArchiveJobsTab';
+import { JobList, loadMessageCounts } from '@/components/dashboard/archive/ArchiveJobsTab';
 import { EmptyState } from '@/components/dashboard/archive/shared';
 import type { Client } from '@/types/database';
 
@@ -28,6 +28,7 @@ export default async function ClientPage({ params }: PageProps) {
 
   const vehicleList = vehicles ?? [];
   const jobList = (jobs ?? []).map((j) => redactJobForRole(j, profile.role));
+  const messageCounts = await loadMessageCounts(supabase, jobList);
 
   return (
     <div className="space-y-4">
@@ -35,7 +36,7 @@ export default async function ClientPage({ params }: PageProps) {
         href="/dashboard/clients"
         className="inline-flex min-h-[48px] items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
       >
-        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Klijenti
+        <ArrowLeft className="h-4 w-4" strokeWidth={2} /> Mušterije
       </Link>
 
       <ClientDetailsCard client={client} />
@@ -43,7 +44,7 @@ export default async function ClientPage({ params }: PageProps) {
       <section className="space-y-2">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Vozila ({vehicleList.length})</h2>
         {vehicleList.length === 0 ? (
-          <EmptyState>Klijent nema upisanih vozila.</EmptyState>
+          <EmptyState>Mušterija nema upisanih vozila.</EmptyState>
         ) : (
           vehicleList.map((vehicle) => <VehicleCard key={vehicle.id} vehicle={vehicle} />)
         )}
@@ -52,13 +53,15 @@ export default async function ClientPage({ params }: PageProps) {
       <section className="space-y-2">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Nalozi ({jobList.length})</h2>
         {jobList.length === 0 ? (
-          <EmptyState>Još nema naloga za ovog klijenta.</EmptyState>
+          <EmptyState>Još nema naloga za ovu mušteriju.</EmptyState>
         ) : (
           // No clients map: every row is this client, so the subtitle is just the date.
           <JobList
             jobs={jobList}
             vehicles={new Map(vehicleList.map((v) => [v.id, v]))}
             clients={new Map<string, Client>()}
+            from={`musterija:${client.id}`}
+            messageCounts={messageCounts}
           />
         )}
       </section>

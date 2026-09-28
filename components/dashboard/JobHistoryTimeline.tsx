@@ -4,7 +4,7 @@ import type { JobEvent } from '@/types/database';
 const ACTOR_LABELS_HR: Record<JobEvent['actor'], string> = {
   system: 'Sustav',
   mechanic: 'Mehaničar',
-  client: 'Klijent',
+  client: 'Mušterija',
 };
 
 export default function JobHistoryTimeline({ events }: { events: JobEvent[] }) {

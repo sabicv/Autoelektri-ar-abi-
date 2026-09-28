@@ -5,7 +5,7 @@ import { Camera, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
-import { compressImage } from '@/lib/compressImage';
+import { compressImage, uploadThumbnail } from '@/lib/compressImage';
 import { readPhotoMetadata } from '@/lib/photoMetadata';
 import { cn } from '@/lib/utils';
 import type { PhotoTag } from '@/types/database';
@@ -86,6 +86,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
           toast.error(`"${original.name}" nije spremljena na nalog. Pokušajte ponovno.`);
           continue;
         }
+        await uploadThumbnail(supabase.storage.from('job-vault'), path, file);
         saved += 1;
       } catch (error) {
         console.error('Job photo processing failed', error);

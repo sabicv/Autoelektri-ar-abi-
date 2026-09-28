@@ -38,7 +38,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
     admin.from('tenants').select('*').eq('id', job.tenant_id).single(),
     admin.from('clients').select('*').eq('id', job.client_id).single(),
     admin.from('vehicles').select('*').eq('id', job.vehicle_id).single(),
-    admin.from('diagnostic_reports').select('dtc_codes').eq('job_id', jobId),
+    admin
+      .from('diagnostic_reports')
+      .select('dtc_codes, module_notes, battery_drain_ma, created_at')
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: false }),
   ]);
   if (!tenant || !client || !vehicle) {
     return NextResponse.json({ error: 'Podaci naloga nisu potpuni.' }, { status: 500 });
@@ -52,6 +56,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
       vehicle,
       job,
       dtcCodes: Array.from(new Set((reports ?? []).flatMap((r) => r.dtc_codes))),
+      // Newest report first: it holds the current module readings.
+      moduleNotes: reports?.[0]?.module_notes ?? null,
+      batteryDrainMa: reports?.[0]?.battery_drain_ma ?? null,
     });
   } catch (error) {
     console.error('Work order PDF generation failed', error);

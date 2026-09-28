@@ -54,7 +54,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
         onClick={() => setNewClientOpen(true)}
         className="press-effect flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white dark:bg-electric-blue dark:text-workshop-dark"
       >
-        <Plus className="h-5 w-5" strokeWidth={2} /> Dodaj klijenta
+        <Plus className="h-5 w-5" strokeWidth={2} /> Dodaj mušteriju
       </button>
 
       <div className="relative">
@@ -70,7 +70,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
       {filteredClients.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 py-16 text-slate-400 dark:border-workshop-border">
           <Users className="h-8 w-8" strokeWidth={2} />
-          <p className="text-sm">Nema klijenata koji odgovaraju pretrazi.</p>
+          <p className="text-sm">Nema mušterija koje odgovaraju pretrazi.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -110,7 +110,7 @@ export default function ClientsBoard({ clients, vehicles, tenantId }: ClientsBoa
           open
           onClose={() => setNewClientOpen(false)}
           tenantId={tenantId}
-          title="Novi klijent i vozilo"
+          title="Nova mušterija i vozilo"
           mode="client"
         />
       )}

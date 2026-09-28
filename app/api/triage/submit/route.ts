@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { triageFormSchema } from '@/lib/validation/triage';
 import { photoMetaColumns } from '@/lib/validation/photoMeta';
+import { thumbPath } from '@/lib/thumbnails';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,8 @@ export async function POST(request: Request) {
 
       const { error: moveError } = await admin.storage.from('job-vault').move(photo.path, finalPath);
       if (moveError) throw moveError;
+      // Best-effort: without it the full photo is shown instead.
+      await admin.storage.from('job-vault').move(thumbPath(photo.path), thumbPath(finalPath));
 
       const { error: insertError } = await admin.from('job_photos').insert({
         job_id: jobId,

@@ -4,7 +4,8 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Camera, CheckCircle2, Loader2, X, ZoomIn } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/compressImage';
+import { compressImage, uploadThumbnail } from '@/lib/compressImage';
+import { thumbPath } from '@/lib/thumbnails';
 import { readPhotoMetadata, type PhotoMetadata } from '@/lib/photoMetadata';
 import type { PhotoTag } from '@/types/database';
 
@@ -91,6 +92,7 @@ export default function PhotoUploadDropzone({
         setPending((prev) => prev.map((p) => (p.id === localId ? { ...p, status: 'error' as const } : p)));
         continue;
       }
+      await uploadThumbnail(supabase.storage.from('job-vault'), path, file);
 
       setPending((prev) => prev.filter((p) => p.id !== localId));
       current = [...current, { path, tag, previewUrl, fileName: file.name, ...meta }];
@@ -101,7 +103,7 @@ export default function PhotoUploadDropzone({
   async function removePhoto(photo: UploadedPhoto) {
     onChange(photos.filter((p) => p.path !== photo.path));
     URL.revokeObjectURL(photo.previewUrl);
-    await supabase.storage.from('job-vault').remove([photo.path]);
+    await supabase.storage.from('job-vault').remove([photo.path, thumbPath(photo.path)]);
   }
 
   function dismissPending(id: string) {

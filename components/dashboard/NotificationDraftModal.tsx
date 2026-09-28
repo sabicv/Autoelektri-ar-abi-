@@ -26,7 +26,7 @@ const TITLES: Record<NotificationType, string> = {
   JOB_FINISHED: 'Obavijest: posao završen',
   DIAGNOSTIC_COMPLETE: 'Obavijest: dijagnostika završena',
   UPSELL_REQUEST: 'Zahtjev za dodatni zahvat',
-  CUSTOM: 'Poruka klijentu',
+  CUSTOM: 'Poruka mušteriji',
 };
 
 function buildInitialDraft(type: NotificationType, job: NotificationDraftModalProps['job']): string {

@@ -80,7 +80,7 @@ const ClientVehicleEditor = forwardRef<SectionHandle, ClientVehicleEditorProps>(
       ]);
 
       if (clientRes.error || vehicleRes.error || jobRes.error || !clientRes.data || !vehicleRes.data) {
-        toast.error('Spremanje podataka o klijentu i vozilu nije uspjelo.');
+        toast.error('Spremanje podataka o mušteriji i vozilu nije uspjelo.');
         return false;
       }
 
@@ -89,7 +89,7 @@ const ClientVehicleEditor = forwardRef<SectionHandle, ClientVehicleEditorProps>(
         job_id: jobId,
         event_type: 'JOB_DETAILS_EDITED',
         actor: 'mechanic',
-        message: 'Podaci o klijentu/vozilu ažurirani.',
+        message: 'Podaci o mušteriji/vozilu ažurirani.',
         metadata: {},
       });
 

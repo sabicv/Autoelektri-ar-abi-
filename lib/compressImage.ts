@@ -1,7 +1,11 @@
 'use client';
 
+import { thumbPath } from '@/lib/thumbnails';
+
 const MAX_BYTES = 500 * 1024;
 const MAX_DIMENSION = 1600;
+// A grid tile is ~120 CSS px; 360 px stays sharp on a 3x phone screen.
+const THUMB_DIMENSION = 360;
 
 function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
@@ -56,4 +60,39 @@ export async function compressImage(file: File): Promise<File> {
 
   const name = file.name.replace(/\.[^.]+$/, '') || 'foto';
   return new File([result], `${name}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+}
+
+// null when the browser can't decode the file (PDF, some HEIC).
+async function createThumbnail(file: File): Promise<Blob | null> {
+  if (!file.type.startsWith('image/')) return null;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    return null;
+  }
+
+  const scale = Math.min(1, THUMB_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const context = canvas.getContext('2d');
+  context?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return context ? canvasToBlob(canvas, 0.72) : null;
+}
+
+interface UploadBucket {
+  upload(path: string, body: Blob, options: { contentType: string; upsert: boolean }): Promise<unknown>;
+}
+
+// Best-effort: without a thumbnail, lists just show the full photo.
+export async function uploadThumbnail(bucket: UploadBucket, path: string, file: File) {
+  try {
+    const thumb = await createThumbnail(file);
+    if (thumb) await bucket.upload(thumbPath(path), thumb, { contentType: 'image/jpeg', upsert: false });
+  } catch {
+    // ignored — see above
+  }
 }

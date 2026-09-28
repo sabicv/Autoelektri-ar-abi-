@@ -11,7 +11,7 @@ export default function DemoResetButton() {
 
   async function handleReset() {
     const confirmed = window.confirm(
-      'Ovo će obrisati sve demo klijente/naloge (oznaka is_demo) i vratiti gotov, uredno posložen set primjera za prikaz. Stvarni klijenti i nalozi ostaju netaknuti. Nastaviti?'
+      'Ovo će obrisati sve demo mušterije/naloge (oznaka is_demo) i vratiti gotov, uredno posložen set primjera za prikaz. Stvarne mušterije i nalozi ostaju netaknuti. Nastaviti?'
     );
     if (!confirmed) return;
 

@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/compressImage';
+import { compressImage, uploadThumbnail } from '@/lib/compressImage';
+import { thumbPath } from '@/lib/thumbnails';
 import { readPhotoMetadata } from '@/lib/photoMetadata';
 import { cn } from '@/lib/utils';
 import type { UploadedPhoto } from '@/components/triage/PhotoUploadDropzone';
@@ -42,7 +43,7 @@ export default function RegistrationScanner({ tenantId, photo, onPhotoChange, on
   async function discard(current: UploadedPhoto | null) {
     if (!current) return;
     URL.revokeObjectURL(current.previewUrl);
-    await createBrowserSupabaseClient().storage.from('job-vault').remove([current.path]);
+    await createBrowserSupabaseClient().storage.from('job-vault').remove([current.path, thumbPath(current.path)]);
   }
 
   async function handleFile(original: File | undefined) {
@@ -66,6 +67,7 @@ export default function RegistrationScanner({ tenantId, photo, onPhotoChange, on
       setFailure('Slika se nije uspjela poslati. Provjerite vezu i pokušajte ponovno.');
       return;
     }
+    await uploadThumbnail(supabase.storage.from('job-vault'), path, file);
 
     const uploaded: UploadedPhoto = {
       path,

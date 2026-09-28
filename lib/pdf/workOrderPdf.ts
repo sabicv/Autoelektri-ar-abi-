@@ -22,6 +22,8 @@ interface WorkOrderInput {
   vehicle: Vehicle;
   job: Job;
   dtcCodes: string[];
+  moduleNotes: string | null;
+  batteryDrainMa: number | null;
 }
 
 // The standard PDF fonts have no č/ć/đ, so a real font is embedded (and
@@ -59,7 +61,15 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
   return lines;
 }
 
-export async function buildWorkOrderPdf({ tenant, client, vehicle, job, dtcCodes }: WorkOrderInput): Promise<Uint8Array> {
+export async function buildWorkOrderPdf({
+  tenant,
+  client,
+  vehicle,
+  job,
+  dtcCodes,
+  moduleNotes,
+  batteryDrainMa,
+}: WorkOrderInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const fonts = await loadFonts(doc);
   const reference = job.id.slice(0, 8).toUpperCase();
@@ -139,6 +149,12 @@ export async function buildWorkOrderPdf({ tenant, client, vehicle, job, dtcCodes
     section(
       'DTC kodovi',
       dtcCodes.map((code) => [code, findDtcCode(code)?.description].filter(Boolean).join(' – ')).join('\n')
+    );
+  }
+  if (batteryDrainMa != null || moduleNotes) {
+    section(
+      'Moduli / CAN-bus',
+      [batteryDrainMa != null ? `Parazitska potrošnja: ${batteryDrainMa} mA` : null, moduleNotes].filter(Boolean).join('\n')
     );
   }
   if (job.diagnostic_notes) section('Dijagnostika', job.diagnostic_notes);
