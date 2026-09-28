@@ -53,6 +53,8 @@ export type ArchiveSearchKind = 'vehicle' | 'job' | 'document';
 
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE';
 
+export type TaskKind = 'TASK' | 'HELP';
+
 // ---------------------------------------------------------------------
 // Supabase-generated-style Database interface
 // (Row = select shape, Insert = required/optional for insert,
@@ -385,8 +387,11 @@ export interface Database {
           id: string;
           tenant_id: string;
           sender_id: string | null;
-          receiver_id: string;
+          receiver_id: string | null;
           job_id: string | null;
+          kind: TaskKind;
+          photo_path: string | null;
+          reply_to_id: string | null;
           message_text: string;
           status: TaskStatus;
           created_at: string;
@@ -396,14 +401,40 @@ export interface Database {
           id?: string;
           tenant_id: string;
           sender_id?: string | null;
-          receiver_id: string;
+          receiver_id?: string | null;
           job_id?: string | null;
+          kind?: TaskKind;
+          photo_path?: string | null;
+          reply_to_id?: string | null;
           message_text: string;
           status?: TaskStatus;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['mechanic_tasks']['Insert']>;
+        Relationships: [];
+      };
+
+      push_subscriptions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['push_subscriptions']['Insert']>;
         Relationships: [];
       };
     };

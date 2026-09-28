@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ChevronRight, FileText, Search, Wrench } from 'lucide-react';
+import { ChevronRight, FileText, MessagesSquare, Search, Wrench } from 'lucide-react';
 import { jobTotal } from '@/lib/finance';
 import Badge from '@/components/ui/Badge';
 import { JOB_STATUS_BADGE_VARIANT } from './JobBadges';
@@ -21,12 +21,19 @@ interface VehicleHistoryTimelineProps {
   jobs: Job[];
   reportsByJobId: Map<string, DiagnosticReport[]>;
   photosByJobId: Record<string, TimelinePhoto[]>;
+  messageCounts: Record<string, number>;
   showCosts: boolean;
 }
 
 const THUMBS_PER_JOB = 6;
 
-export default function VehicleHistoryTimeline({ jobs, reportsByJobId, photosByJobId, showCosts }: VehicleHistoryTimelineProps) {
+export default function VehicleHistoryTimeline({
+  jobs,
+  reportsByJobId,
+  photosByJobId,
+  messageCounts,
+  showCosts,
+}: VehicleHistoryTimelineProps) {
   const [dtcQuery, setDtcQuery] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -141,12 +148,22 @@ export default function VehicleHistoryTimeline({ jobs, reportsByJobId, photosByJ
                   </div>
                 )}
 
-                <Link
-                  href={`/dashboard/jobs/${job.id}`}
-                  className="mt-2 inline-flex min-h-[48px] items-center gap-1 text-sm font-semibold text-blue-600 dark:text-electric-blue"
-                >
-                  Otvori nalog <ChevronRight className="h-4 w-4" strokeWidth={2} />
-                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4">
+                  <Link
+                    href={`/dashboard/jobs/${job.id}`}
+                    className="inline-flex min-h-[48px] items-center gap-1 text-sm font-semibold text-blue-600 dark:text-electric-blue"
+                  >
+                    Otvori nalog <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                  </Link>
+                  {messageCounts[job.id] > 0 && (
+                    <Link
+                      href={`/dashboard/jobs/${job.id}?poruke=1`}
+                      className="inline-flex min-h-[48px] items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-300"
+                    >
+                      <MessagesSquare className="h-4 w-4" strokeWidth={2} /> Interne poruke ({messageCounts[job.id]})
+                    </Link>
+                  )}
+                </div>
               </li>
             );
           })}

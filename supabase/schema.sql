@@ -712,3 +712,79 @@ alter table public.job_photos add column if not exists gps_lat double precision;
 alter table public.job_photos add column if not exists gps_lng double precision;
 
 comment on column public.job_photos.taken_at is 'Capture time from EXIF (or the file timestamp). NULL for older uploads — fall back to created_at.';
+
+-- ---------------------------------------------------------------------
+-- 18. Help requests, replies and a permanent per-job message record
+-- ---------------------------------------------------------------------
+
+-- TASK = owner → mechanic. HELP = mechanic → management ("Trebam pomoć"),
+-- addressed to no single person: every owner sees it.
+alter table public.mechanic_tasks add column if not exists kind text not null default 'TASK';
+alter table public.mechanic_tasks add column if not exists photo_path text;
+alter table public.mechanic_tasks add column if not exists reply_to_id uuid references public.mechanic_tasks (id) on delete set null;
+alter table public.mechanic_tasks alter column receiver_id drop not null;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'mechanic_tasks_kind_check') then
+    alter table public.mechanic_tasks
+      add constraint mechanic_tasks_kind_check
+      check (kind in ('TASK', 'HELP') and (kind = 'HELP' or receiver_id is not null));
+  end if;
+end $$;
+
+create index if not exists idx_mechanic_tasks_job on public.mechanic_tasks (job_id, created_at);
+
+-- Senders also see what they sent (a mechanic tracks their own help requests).
+drop policy if exists "mechanic_tasks_select" on public.mechanic_tasks;
+create policy "mechanic_tasks_select" on public.mechanic_tasks
+  for select
+  to authenticated
+  using (
+    tenant_id = public.auth_tenant_id()
+    and (receiver_id = auth.uid() or sender_id = auth.uid() or public.auth_role() = 'owner')
+  );
+
+drop policy if exists "mechanic_tasks_insert_help" on public.mechanic_tasks;
+create policy "mechanic_tasks_insert_help" on public.mechanic_tasks
+  for insert
+  to authenticated
+  with check (
+    tenant_id = public.auth_tenant_id()
+    and kind = 'HELP'
+    and sender_id = auth.uid()
+    and receiver_id is null
+    and job_id is not null
+    and exists (select 1 from public.jobs j where j.id = job_id and j.tenant_id = mechanic_tasks.tenant_id)
+  );
+
+-- Anything tied to a job is part of that job's permanent record: text is
+-- already immutable (column grant), and now it can't be deleted either.
+drop policy if exists "mechanic_tasks_delete_owner" on public.mechanic_tasks;
+create policy "mechanic_tasks_delete_owner" on public.mechanic_tasks
+  for delete
+  to authenticated
+  using (tenant_id = public.auth_tenant_id() and public.auth_role() = 'owner' and job_id is null);
+
+-- Web Push endpoints, one per device a staff member enabled notifications on.
+create table if not exists public.push_subscriptions (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references public.tenants (id) on delete cascade,
+  profile_id  uuid not null references public.profiles (id) on delete cascade,
+  endpoint    text not null unique,
+  p256dh      text not null,
+  auth        text not null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_push_subscriptions_profile on public.push_subscriptions (profile_id);
+
+alter table public.push_subscriptions enable row level security;
+grant select, insert, delete on public.push_subscriptions to authenticated;
+
+drop policy if exists "push_subscriptions_own" on public.push_subscriptions;
+create policy "push_subscriptions_own" on public.push_subscriptions
+  for all
+  to authenticated
+  using (profile_id = auth.uid() and tenant_id = public.auth_tenant_id())
+  with check (profile_id = auth.uid() and tenant_id = public.auth_tenant_id());

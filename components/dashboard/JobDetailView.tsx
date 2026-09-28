@@ -14,6 +14,7 @@ import {
   Euro,
   History,
   KeyRound,
+  LifeBuoy,
   Lock,
   MoreHorizontal,
   Phone,
@@ -43,17 +44,19 @@ import JobHistoryTimeline from './JobHistoryTimeline';
 import type { NotificationType } from './NotificationDraftModal';
 import type { SectionHandle } from './sectionHandle';
 import type { StaffOption } from './tasks/TaskComposer';
+import JobMessages from './tasks/JobMessages';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { daysSince, formatEuroHR, JOB_STATUS_LABELS_HR, vehicleLabel } from '@/lib/format';
 import { jobTotal, redactJobForRole } from '@/lib/finance';
 import { SYMPTOM_OPTIONS } from '@/lib/validation/triage';
 import { cn } from '@/lib/utils';
-import type { Client, Job, JobEvent, JobStatus, JobUpdate, StaffRole, Vehicle } from '@/types/database';
+import type { Client, Job, JobEvent, JobStatus, JobUpdate, MechanicTask, StaffRole, Vehicle } from '@/types/database';
 
 // Opened on demand only — kept out of the job page's initial bundle.
 const NotificationDraftModal = dynamic(() => import('./NotificationDraftModal'), { ssr: false });
 const SmartLockboxModal = dynamic(() => import('./SmartLockboxModal'), { ssr: false });
 const TaskComposer = dynamic(() => import('./tasks/TaskComposer'), { ssr: false });
+const HelpRequestSheet = dynamic(() => import('./tasks/HelpRequestSheet'), { ssr: false });
 
 const SELECTABLE_JOB_STATUSES: JobStatus[] = [
   'PENDING_TRIAGE',
@@ -76,6 +79,9 @@ interface JobDetailViewProps {
   viewerRole: StaffRole;
   currentUserId: string;
   staff: StaffOption[];
+  staffNames: Record<string, string>;
+  messages: MechanicTask[];
+  openMessages: boolean;
 }
 
 export default function JobDetailView({
@@ -86,6 +92,9 @@ export default function JobDetailView({
   viewerRole,
   currentUserId,
   staff,
+  staffNames,
+  messages: initialMessages,
+  openMessages,
 }: JobDetailViewProps) {
   const isOwner = viewerRole === 'owner';
   const [currentJob, setCurrentJob] = useState(job);
@@ -98,6 +107,8 @@ export default function JobDetailView({
   const [notificationType, setNotificationType] = useState<NotificationType | null>(null);
   const [lockboxOpen, setLockboxOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [messages, setMessages] = useState(initialMessages);
   const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const diagnosticRef = useRef<SectionHandle>(null);
@@ -285,6 +296,30 @@ export default function JobDetailView({
             <Bell className="h-4 w-4" strokeWidth={2} /> Obavijesti klijenta da je gotovo
           </Button>
         )}
+        {!isOwner && (
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="press-effect mt-2 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-xl border-2 border-alarm-red text-base font-semibold text-alarm-red dark:border-red-400 dark:text-red-400"
+          >
+            <LifeBuoy className="h-5 w-5" strokeWidth={2} /> Trebam pomoć
+          </button>
+        )}
+
+        <div className="mt-1 flex justify-end">
+          <JobMessages
+            messages={messages}
+            onMessagesChange={setMessages}
+            staffNames={staffNames}
+            receivers={staff}
+            role={viewerRole}
+            currentUserId={currentUserId}
+            tenantId={currentJob.tenant_id}
+            jobId={currentJob.id}
+            jobLabel={vehicleLabel(currentVehicle)}
+            defaultOpen={openMessages}
+          />
+        </div>
       </Card>
 
       <Card className="p-4">
@@ -507,6 +542,17 @@ export default function JobDetailView({
           staff={staff}
           jobId={currentJob.id}
           jobLabel={vehicleLabel(currentVehicle)}
+          onSent={(task) => setMessages((prev) => [...prev, task])}
+        />
+      )}
+
+      {helpOpen && (
+        <HelpRequestSheet
+          open
+          onClose={() => setHelpOpen(false)}
+          tenantId={currentJob.tenant_id}
+          jobId={currentJob.id}
+          onSent={(task) => setMessages((prev) => [...prev, task])}
         />
       )}
     </div>

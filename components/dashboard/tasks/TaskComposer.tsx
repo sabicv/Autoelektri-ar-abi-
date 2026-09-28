@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Car, Loader2, Mic, MicOff, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useSpeechToText } from '@/lib/useSpeechToText';
 import { clearDraft, readDraft, writeDraft } from '@/lib/drafts';
 import { cn } from '@/lib/utils';
@@ -23,6 +22,8 @@ interface TaskComposerProps {
   staff: StaffOption[];
   jobId?: string;
   jobLabel?: string;
+  // Replying to a help request: the reply goes straight back to its sender.
+  replyTo?: { id: string; senderId: string };
   onSent?: (task: MechanicTask) => void;
 }
 
@@ -34,10 +35,13 @@ export default function TaskComposer({
   staff,
   jobId,
   jobLabel,
+  replyTo,
   onSent,
 }: TaskComposerProps) {
-  const draftKey = `draft:task:${tenantId}:${jobId ?? 'general'}`;
-  const [receiverId, setReceiverId] = useState<string | null>(staff.length === 1 ? staff[0].id : null);
+  const draftKey = `draft:task:${tenantId}:${replyTo?.id ?? jobId ?? 'general'}`;
+  const [receiverId, setReceiverId] = useState<string | null>(
+    replyTo?.senderId ?? (staff.length === 1 ? staff[0].id : null)
+  );
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
@@ -72,20 +76,27 @@ export default function TaskComposer({
     }
 
     setIsSending(true);
-    const { data, error } = await createBrowserSupabaseClient()
-      .from('mechanic_tasks')
-      .insert({
-        tenant_id: tenantId,
-        sender_id: currentUserId,
-        receiver_id: receiverId,
-        job_id: jobId ?? null,
-        message_text: message.trim(),
-      })
-      .select('*')
-      .single();
+    let data: MechanicTask | null = null;
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'TASK',
+          message: message.trim(),
+          receiverId,
+          jobId: jobId ?? null,
+          replyToId: replyTo?.id ?? null,
+        }),
+      });
+      const json = await response.json();
+      if (response.ok) data = json.task;
+    } catch {
+      // handled below
+    }
     setIsSending(false);
 
-    if (error || !data) {
+    if (!data) {
       toast.error('Slanje zadatka nije uspjelo.');
       return;
     }
@@ -100,7 +111,9 @@ export default function TaskComposer({
   return (
     <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
       <DrawerContent className="max-h-[95dvh]">
-        <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">Zadatak mehaničaru</DrawerTitle>
+        <DrawerTitle className="px-4 pt-4 text-base font-bold text-slate-900 dark:text-slate-100">
+          {replyTo ? 'Odgovor' : 'Zadatak mehaničaru'}
+        </DrawerTitle>
 
         <div className="space-y-4 overflow-y-auto px-4 py-4">
           {jobLabel && (
@@ -109,7 +122,7 @@ export default function TaskComposer({
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className={cn('flex flex-wrap gap-2', replyTo && 'hidden')}>
             {staff.map((s) => (
               <button
                 key={s.id}

@@ -3,8 +3,23 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ALargeSmall, Archive, BarChart3, Briefcase, LogOut, MoreVertical, Moon, Settings, Sun, Users } from 'lucide-react';
+import {
+  ALargeSmall,
+  Archive,
+  BarChart3,
+  Bell,
+  BellRing,
+  Briefcase,
+  LogOut,
+  MoreVertical,
+  Moon,
+  Settings,
+  Sun,
+  Users,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { enablePush, isPushEnabled, pushSupported } from '@/lib/pushClient';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/Drawer';
 import { cn } from '@/lib/utils';
 import type { StaffRole } from '@/types/database';
@@ -35,6 +50,28 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
   const [isDark, setIsDark] = useState(false);
   const [fontScaleIndex, setFontScaleIndex] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [pushState, setPushState] = useState<'unsupported' | 'off' | 'on' | 'working'>('unsupported');
+
+  useEffect(() => {
+    if (!pushSupported()) return;
+    isPushEnabled().then((enabled) => setPushState(enabled ? 'on' : 'off'));
+  }, []);
+
+  async function handleEnablePush() {
+    setPushState('working');
+    const result = await enablePush();
+    if (result === 'enabled') {
+      setPushState('on');
+      toast.success('Obavijesti su uključene.');
+    } else {
+      setPushState('off');
+      toast.error(
+        result === 'denied'
+          ? 'Obavijesti su blokirane u pregledniku. Dozvoli ih preko ikone lokota pored adrese.'
+          : 'Uključivanje obavijesti nije uspjelo.'
+      );
+    }
+  }
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -132,6 +169,22 @@ export default function DashboardNav({ tenantName, role }: { tenantName: string;
                 </Link>
                 <div className="my-1 border-t border-slate-100 dark:border-workshop-border" />
               </>
+            )}
+
+            {pushState !== 'unsupported' && (
+              <button
+                type="button"
+                onClick={handleEnablePush}
+                disabled={pushState === 'on' || pushState === 'working'}
+                className="press-effect flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-100 dark:text-slate-200 dark:hover:bg-workshop-surface-hover"
+              >
+                {pushState === 'on' ? (
+                  <BellRing className="h-5 w-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+                ) : (
+                  <Bell className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
+                )}
+                {pushState === 'on' ? 'Obavijesti na mobitel: uključene' : 'Uključi obavijesti na mobitel'}
+              </button>
             )}
 
             <button

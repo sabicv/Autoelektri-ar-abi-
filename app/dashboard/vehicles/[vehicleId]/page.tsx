@@ -33,13 +33,17 @@ export default async function VehiclePassportPage({ params }: PageProps) {
   const jobList = (jobs ?? []).map((j) => redactJobForRole(j, profile.role));
   const jobIds = jobList.map((j) => j.id);
 
-  const [{ data: reports }, { data: photoRows }] =
+  const [{ data: reports }, { data: photoRows }, { data: messageRows }] =
     jobIds.length > 0
       ? await Promise.all([
           supabase.from('diagnostic_reports').select('*').in('job_id', jobIds),
           supabase.from('job_photos').select('*').in('job_id', jobIds),
+          supabase.from('mechanic_tasks').select('job_id').in('job_id', jobIds),
         ])
-      : [{ data: [] as DiagnosticReport[] }, { data: [] as JobPhoto[] }];
+      : [{ data: [] as DiagnosticReport[] }, { data: [] as JobPhoto[] }, { data: [] as { job_id: string | null }[] }];
+
+  const messageCounts: Record<string, number> = {};
+  for (const m of messageRows ?? []) if (m.job_id) messageCounts[m.job_id] = (messageCounts[m.job_id] ?? 0) + 1;
 
   const reportsByJobId = new Map<string, DiagnosticReport[]>();
   for (const report of reports ?? []) {
@@ -124,6 +128,7 @@ export default async function VehiclePassportPage({ params }: PageProps) {
         jobs={jobList}
         reportsByJobId={reportsByJobId}
         photosByJobId={photosByJobId}
+        messageCounts={messageCounts}
         showCosts={isOwner}
       />
     </div>
