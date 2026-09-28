@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { compressImage } from '@/lib/compressImage';
+import { readPhotoMetadata } from '@/lib/photoMetadata';
 import { cn } from '@/lib/utils';
 import type { UploadedPhoto } from '@/components/triage/PhotoUploadDropzone';
 
@@ -51,6 +52,7 @@ export default function RegistrationScanner({ tenantId, photo, onPhotoChange, on
     onPhotoChange(null);
     setFailure(null);
     setState('working');
+    const meta = await readPhotoMetadata(original);
     const file = await compressImage(original);
 
     const supabase = createBrowserSupabaseClient();
@@ -70,6 +72,7 @@ export default function RegistrationScanner({ tenantId, photo, onPhotoChange, on
       tag: 'REGISTRATION_CARD',
       previewUrl: URL.createObjectURL(file),
       fileName: file.name,
+      ...meta,
     };
     onPhotoChange(uploaded);
 

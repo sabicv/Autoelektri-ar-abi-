@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { existingVehicleJobSchema, newJobSchema } from '@/lib/validation/newJob';
+import { photoMetaColumns } from '@/lib/validation/photoMeta';
 
 // =====================================================================
 // Staff-facing "create job" endpoint. Two shapes:
@@ -144,6 +145,7 @@ export async function POST(request: Request) {
         tenant_id: tenantId,
         photo_url: finalPath,
         tag: photo.tag,
+        ...photoMetaColumns(photo),
       });
       if (insertError) throw insertError;
     } catch (error) {

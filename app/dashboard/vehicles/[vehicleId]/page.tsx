@@ -2,11 +2,11 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Car, Phone, User } from 'lucide-react';
 import { getSessionProfile } from '@/lib/session';
-import { vehicleLabel } from '@/lib/format';
+import { isPdfPath, vehicleLabel } from '@/lib/format';
 import { redactJobForRole } from '@/lib/finance';
 import Card from '@/components/ui/Card';
-import VehicleHistoryTimeline from '@/components/dashboard/VehicleHistoryTimeline';
-import type { DiagnosticReport } from '@/types/database';
+import VehicleHistoryTimeline, { type TimelinePhoto } from '@/components/dashboard/VehicleHistoryTimeline';
+import type { DiagnosticReport, JobPhoto } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,16 +33,47 @@ export default async function VehiclePassportPage({ params }: PageProps) {
   const jobList = (jobs ?? []).map((j) => redactJobForRole(j, profile.role));
   const jobIds = jobList.map((j) => j.id);
 
-  const { data: reports } =
+  const [{ data: reports }, { data: photoRows }] =
     jobIds.length > 0
-      ? await supabase.from('diagnostic_reports').select('*').in('job_id', jobIds)
-      : { data: [] as DiagnosticReport[] };
+      ? await Promise.all([
+          supabase.from('diagnostic_reports').select('*').in('job_id', jobIds),
+          supabase.from('job_photos').select('*').in('job_id', jobIds),
+        ])
+      : [{ data: [] as DiagnosticReport[] }, { data: [] as JobPhoto[] }];
 
   const reportsByJobId = new Map<string, DiagnosticReport[]>();
   for (const report of reports ?? []) {
     const existing = reportsByJobId.get(report.job_id) ?? [];
     existing.push(report);
     reportsByJobId.set(report.job_id, existing);
+  }
+
+  // One batch of signed URLs for the whole vehicle instead of one request per job.
+  const rows = photoRows ?? [];
+  const { data: signed } =
+    rows.length > 0
+      ? await supabase.storage.from('job-vault').createSignedUrls(
+          rows.map((p) => p.photo_url),
+          3600
+        )
+      : { data: [] };
+  const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  const captured = (p: JobPhoto) => p.taken_at ?? p.created_at;
+
+  const photosByJobId: Record<string, TimelinePhoto[]> = {};
+  for (const p of [...rows].sort((a, b) => captured(b).localeCompare(captured(a)))) {
+    (photosByJobId[p.job_id] ??= []).push({
+      id: p.id,
+      path: p.photo_url,
+      url: urlByPath.get(p.photo_url) ?? '',
+      tag: p.tag,
+      caption: p.caption,
+      createdAt: p.created_at,
+      takenAt: p.taken_at,
+      gpsLat: p.gps_lat,
+      gpsLng: p.gps_lng,
+      isPdf: isPdfPath(p.photo_url),
+    });
   }
 
   return (
@@ -86,10 +117,15 @@ export default async function VehiclePassportPage({ params }: PageProps) {
       </Card>
 
       <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-        Povijest naloga ({jobList.length})
+        Povijest vozila ({jobList.length})
       </h2>
 
-      <VehicleHistoryTimeline jobs={jobList} reportsByJobId={reportsByJobId} showCosts={isOwner} />
+      <VehicleHistoryTimeline
+        jobs={jobList}
+        reportsByJobId={reportsByJobId}
+        photosByJobId={photosByJobId}
+        showCosts={isOwner}
+      />
     </div>
   );
 }

@@ -117,7 +117,7 @@ export default function QRTriageForm({ tenant }: QRTriageFormProps) {
       symptoms: values.symptoms,
       description: values.description || undefined,
       isEmergency: values.isEmergency,
-      photos: [...intakePhotos, ...registrationPhotos].map(({ path, tag }) => ({ path, tag })),
+      photos: [...intakePhotos, ...registrationPhotos].map(({ path, tag, takenAt, gpsLat, gpsLng }) => ({ path, tag, takenAt, gpsLat, gpsLng })),
     };
 
     const parsed = triageFormSchema.safeParse(payload);

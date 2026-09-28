@@ -248,7 +248,7 @@ export default function NewJobModal({ open, onClose, tenantId, title = 'Novi nal
   }
 
   async function submitJob() {
-    const photos = [...(registrationPhoto ? [registrationPhoto] : []), ...intakePhotos].map(({ path, tag }) => ({ path, tag }));
+    const photos = [...(registrationPhoto ? [registrationPhoto] : []), ...intakePhotos].map(({ path, tag, takenAt, gpsLat, gpsLng }) => ({ path, tag, takenAt, gpsLat, gpsLng }));
     const jobFields = {
       symptoms: values.symptoms,
       description: values.description || undefined,

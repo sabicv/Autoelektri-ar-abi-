@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { triageFormSchema } from '@/lib/validation/triage';
+import { photoMetaColumns } from '@/lib/validation/photoMeta';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         tenant_id: tenantId,
         photo_url: finalPath,
         tag: photo.tag,
+        ...photoMetaColumns(photo),
       });
       if (insertError) throw insertError;
     } catch (error) {

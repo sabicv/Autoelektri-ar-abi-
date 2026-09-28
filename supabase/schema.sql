@@ -700,3 +700,15 @@ begin
     alter publication supabase_realtime add table public.mechanic_tasks;
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------
+-- 17. Photo capture metadata (read from EXIF in the browser at upload)
+-- ---------------------------------------------------------------------
+
+-- created_at is when the file reached the server; taken_at is when the
+-- shutter fired, which is what a repair history should be ordered by.
+alter table public.job_photos add column if not exists taken_at timestamptz;
+alter table public.job_photos add column if not exists gps_lat double precision;
+alter table public.job_photos add column if not exists gps_lng double precision;
+
+comment on column public.job_photos.taken_at is 'Capture time from EXIF (or the file timestamp). NULL for older uploads — fall back to created_at.';

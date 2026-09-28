@@ -308,6 +308,9 @@ export interface Database {
           photo_url: string;
           tag: PhotoTag;
           caption: string | null;
+          taken_at: string | null;
+          gps_lat: number | null;
+          gps_lng: number | null;
           created_at: string;
         };
         Insert: {
@@ -317,6 +320,9 @@ export interface Database {
           photo_url: string;
           tag: PhotoTag;
           caption?: string | null;
+          taken_at?: string | null;
+          gps_lat?: number | null;
+          gps_lng?: number | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['job_photos']['Insert']>;

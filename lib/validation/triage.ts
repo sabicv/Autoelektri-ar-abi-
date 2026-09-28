@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { photoMetaFields } from './photoMeta';
 
 export const SYMPTOM_OPTIONS = [
   {
@@ -80,6 +81,7 @@ export const triageFormSchema = z.object({
       z.object({
         path: z.string().min(1),
         tag: PHOTO_TAG_SUBSET,
+        ...photoMetaFields,
       })
     )
     .max(12, 'Previše fotografija.'),

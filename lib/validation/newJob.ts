@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SYMPTOM_OPTIONS, type SymptomCode } from './triage';
+import { photoMetaFields } from './photoMeta';
 
 const SYMPTOM_CODES = SYMPTOM_OPTIONS.map((option) => option.code) as [SymptomCode, ...SymptomCode[]];
 const currentYear = new Date().getFullYear();
@@ -52,6 +53,7 @@ export const newJobSchema = z.object({
       z.object({
         path: z.string().min(1),
         tag: z.enum(['INTAKE_CONDITION', 'REGISTRATION_CARD']),
+        ...photoMetaFields,
       })
     )
     .max(8, 'Previše fotografija.')

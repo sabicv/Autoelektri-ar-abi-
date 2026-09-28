@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
 import { compressImage } from '@/lib/compressImage';
+import { readPhotoMetadata } from '@/lib/photoMetadata';
 import { cn } from '@/lib/utils';
 import type { PhotoTag } from '@/types/database';
 
@@ -48,6 +49,7 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
     let saved = 0;
 
     for (const original of Array.from(fileList)) {
+      const meta = await readPhotoMetadata(original);
       const file = await compressImage(original);
       // Staff already has full RLS access to their own tenant's job-vault
       // folder, so this uploads straight to the final path — no temp
@@ -70,6 +72,9 @@ export default function JobPhotoUploader({ jobId, tenantId, onUploaded }: JobPho
         tenant_id: tenantId,
         photo_url: path,
         tag,
+        taken_at: meta.takenAt,
+        gps_lat: meta.gpsLat,
+        gps_lng: meta.gpsLng,
       });
 
       if (insertError) {

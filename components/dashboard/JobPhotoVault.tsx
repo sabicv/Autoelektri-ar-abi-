@@ -59,6 +59,9 @@ export default function JobPhotoVault({ jobId, allowDelete = false }: JobPhotoVa
           tag: r.tag,
           caption: r.caption,
           createdAt: r.created_at,
+          takenAt: r.taken_at,
+          gpsLat: r.gps_lat,
+          gpsLng: r.gps_lng,
         }))
       );
     }

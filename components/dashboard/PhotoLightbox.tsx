@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, X } from 'lucide-react';
 import { PHOTO_TAG_LABELS_HR } from '@/lib/format';
 import type { PhotoTag } from '@/types/database';
 
@@ -14,6 +14,9 @@ export interface LightboxPhoto {
   tag: PhotoTag;
   caption: string | null;
   createdAt: string;
+  takenAt?: string | null;
+  gpsLat?: number | null;
+  gpsLng?: number | null;
 }
 
 interface PhotoLightboxProps {
@@ -103,11 +106,23 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
         <div className="flex items-center justify-between px-4 py-3 text-white">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{PHOTO_TAG_LABELS_HR[photo.tag]}</p>
-            <p className="text-xs text-white/60">
-              {new Date(photo.createdAt).toLocaleString('hr-HR', {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              })}
+            <p className="flex flex-wrap items-center gap-x-3 text-xs text-white/70">
+              <span>
+                {new Date(photo.takenAt ?? photo.createdAt).toLocaleString('hr-HR', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+              </span>
+              {photo.gpsLat != null && photo.gpsLng != null && (
+                <a
+                  href={`https://www.google.com/maps?q=${photo.gpsLat},${photo.gpsLng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-white underline"
+                >
+                  <MapPin className="h-3.5 w-3.5" strokeWidth={2} /> Lokacija
+                </a>
+              )}
             </p>
           </div>
           <button

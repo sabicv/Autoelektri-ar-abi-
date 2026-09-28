@@ -5,9 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Camera, CheckCircle2, Loader2, X, ZoomIn } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { compressImage } from '@/lib/compressImage';
+import { readPhotoMetadata, type PhotoMetadata } from '@/lib/photoMetadata';
 import type { PhotoTag } from '@/types/database';
 
-export interface UploadedPhoto {
+export interface UploadedPhoto extends Partial<PhotoMetadata> {
   path: string;
   tag: PhotoTag;
   previewUrl: string;
@@ -64,6 +65,7 @@ export default function PhotoUploadDropzone({
     const files = Array.from(fileList).slice(0, remainingSlots);
 
     for (const original of files) {
+      const meta = await readPhotoMetadata(original);
       const file = await compressImage(original);
       if (file.size > maxFileSizeMb * 1024 * 1024) {
         setGlobalError(`Fotografija "${file.name}" je prevelika (max ${maxFileSizeMb}MB).`);
@@ -87,7 +89,7 @@ export default function PhotoUploadDropzone({
       }
 
       setPending((prev) => prev.filter((p) => p.id !== localId));
-      onChange([...photos, { path, tag, previewUrl, fileName: file.name }]);
+      onChange([...photos, { path, tag, previewUrl, fileName: file.name, ...meta }]);
     }
   }
 
